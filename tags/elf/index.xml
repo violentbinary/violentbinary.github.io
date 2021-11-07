@@ -3,12 +3,12 @@
         <title>ELF - Tag - Violent Binary</title>
         <link>https://violentbinary.github.io/tags/elf/</link>
         <description>ELF - Tag - Violent Binary</description>
-        <generator>Hugo -- gohugo.io</generator><language>en</language><lastBuildDate>Sat, 06 Nov 2021 21:08:51 &#43;0800</lastBuildDate><atom:link href="https://violentbinary.github.io/tags/elf/" rel="self" type="application/rss+xml" /><item>
+        <generator>Hugo -- gohugo.io</generator><language>en</language><lastBuildDate>Sun, 07 Nov 2021 21:13:39 &#43;0800</lastBuildDate><atom:link href="https://violentbinary.github.io/tags/elf/" rel="self" type="application/rss+xml" /><item>
     <title>ELF Static Injection to Load Malicious Dynamic Link Library</title>
-    <link>https://violentbinary.github.io/posts/elf-static-injection-to-load-malicious-dynamic-link-library/elf-static-injection-to-load-malicious-dynamic-link-library-en/</link>
-    <pubDate>Sat, 06 Nov 2021 21:08:51 &#43;0800</pubDate>
+    <link>https://violentbinary.github.io/posts/1-elf-static-injection-to-load-malicious-dynamic-link-library/</link>
+    <pubDate>Sun, 07 Nov 2021 21:13:39 &#43;0800</pubDate>
     <author>Author</author>
-    <guid>https://violentbinary.github.io/posts/elf-static-injection-to-load-malicious-dynamic-link-library/elf-static-injection-to-load-malicious-dynamic-link-library-en/</guid>
+    <guid>https://violentbinary.github.io/posts/1-elf-static-injection-to-load-malicious-dynamic-link-library/</guid>
     <description><![CDATA[<div class="featured-image">
                 <img src="/images/1-elf-sj/elf-sj-title.jpg" referrerpolicy="no-referrer">
             </div>TL;DR In this blog post, I will go through the process of why and how I built a new framework called spirit 🎃, using which, I was able to load malicious dynamic link library by injecting parasitic code into the ELF file. You will see the huge difference between this static injection and the tranditional so Hijacking in Linux.
