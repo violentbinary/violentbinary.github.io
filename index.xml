@@ -3,7 +3,6 @@
         <title>Violent Binary</title>
         <link>https://violentbinary.github.io/</link>
         <description>Violent Binary</description>
-<<<<<<< HEAD
         <generator>Hugo -- gohugo.io</generator><language>en</language><lastBuildDate>Sun, 07 Nov 2021 20:59:56 &#43;0800</lastBuildDate>
             <atom:link href="https://violentbinary.github.io/index.xml" rel="self" type="application/rss+xml" />
         <item>
@@ -17,9 +16,4 @@
             </div>TL;DR In this blog post, I will go through the process of why and how I built a new framework called spirit 🎃, using which, I was able to load malicious dynamic link library by injecting parasitic code into the ELF file. You will see the huge difference between this static injection and the tranditional so Hijacking in Linux.
 Introduction As we know, whether it is dll hijacking in Windows or so hijacking in Linux, their idea is to insert code when the program is running to load the dynamic link library (so).]]></description>
 </item></channel>
-=======
-        <generator>Hugo -- gohugo.io</generator><language>en</language>
-            <atom:link href="https://violentbinary.github.io/index.xml" rel="self" type="application/rss+xml" />
-        </channel>
->>>>>>> a4ec3f3cfcac322b1b566a5c77c261bb59df8fa3
 </rss>
