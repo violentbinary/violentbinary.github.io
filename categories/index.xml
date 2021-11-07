@@ -3,19 +3,5 @@
         <title>Categories - Category - Violent Binary</title>
         <link>https://violentbinary.github.io/categories/</link>
         <description>Categories - Category - Violent Binary</description>
-        <generator>Hugo -- gohugo.io</generator><language>en</language><lastBuildDate>Sat, 06 Nov 2021 21:08:51 &#43;0800</lastBuildDate><atom:link href="https://violentbinary.github.io/categories/" rel="self" type="application/rss+xml" /><item>
-    <title>ELF</title>
-    <link>https://violentbinary.github.io/categories/elf/</link>
-    <pubDate>Sat, 06 Nov 2021 21:08:51 &#43;0800</pubDate>
-    <author>Author</author>
-    <guid>https://violentbinary.github.io/categories/elf/</guid>
-    <description><![CDATA[]]></description>
-</item><item>
-    <title>reverse engineering</title>
-    <link>https://violentbinary.github.io/categories/reverse-engineering/</link>
-    <pubDate>Sat, 06 Nov 2021 21:08:51 &#43;0800</pubDate>
-    <author>Author</author>
-    <guid>https://violentbinary.github.io/categories/reverse-engineering/</guid>
-    <description><![CDATA[]]></description>
-</item></channel>
+        <generator>Hugo -- gohugo.io</generator><language>en</language><atom:link href="https://violentbinary.github.io/categories/" rel="self" type="application/rss+xml" /></channel>
 </rss>
