@@ -12,7 +12,7 @@
     <author>Author</author>
     <guid>https://violentbinary.github.io/posts/elf-static-injection-to-load-malicious-dynamic-link-library/elf-static-injection-to-load-malicious-dynamic-link-library-en/</guid>
     <description><![CDATA[<div class="featured-image">
-                <img src="/images/exploitable.png" referrerpolicy="no-referrer">
+                <img src="/images/1-elf-sj/elf-sj-title.jpg" referrerpolicy="no-referrer">
             </div>TL;DR In this blog post, I will go through the process of why and how I built a new framework called spirit 🎃, using which, I was able to load malicious dynamic link library by injecting parasitic code into the ELF file. You will see the huge difference between this static injection and the tranditional so Hijacking in Linux.
 Introduction As we know, whether it is dll hijacking in Windows or so hijacking in Linux, their idea is to insert code when the program is running to load the dynamic link library (so).]]></description>
 </item></channel>
