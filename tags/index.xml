@@ -3,5 +3,37 @@
         <title>Tags - Tag - Violent Binary</title>
         <link>https://violentbinary.github.io/tags/</link>
         <description>Tags - Tag - Violent Binary</description>
+<<<<<<< HEAD
+        <generator>Hugo -- gohugo.io</generator><language>en</language><lastBuildDate>Sun, 07 Nov 2021 20:59:56 &#43;0800</lastBuildDate><atom:link href="https://violentbinary.github.io/tags/" rel="self" type="application/rss+xml" /><item>
+    <title>ELF</title>
+    <link>https://violentbinary.github.io/tags/elf/</link>
+    <pubDate>Sun, 07 Nov 2021 20:59:56 &#43;0800</pubDate>
+    <author>Author</author>
+    <guid>https://violentbinary.github.io/tags/elf/</guid>
+    <description><![CDATA[]]></description>
+</item><item>
+    <title>injection</title>
+    <link>https://violentbinary.github.io/tags/injection/</link>
+    <pubDate>Sun, 07 Nov 2021 20:59:56 &#43;0800</pubDate>
+    <author>Author</author>
+    <guid>https://violentbinary.github.io/tags/injection/</guid>
+    <description><![CDATA[]]></description>
+</item><item>
+    <title>Linux</title>
+    <link>https://violentbinary.github.io/tags/linux/</link>
+    <pubDate>Sun, 07 Nov 2021 20:59:56 &#43;0800</pubDate>
+    <author>Author</author>
+    <guid>https://violentbinary.github.io/tags/linux/</guid>
+    <description><![CDATA[]]></description>
+</item><item>
+    <title>patch</title>
+    <link>https://violentbinary.github.io/tags/patch/</link>
+    <pubDate>Sun, 07 Nov 2021 20:59:56 &#43;0800</pubDate>
+    <author>Author</author>
+    <guid>https://violentbinary.github.io/tags/patch/</guid>
+    <description><![CDATA[]]></description>
+</item></channel>
+=======
         <generator>Hugo -- gohugo.io</generator><language>en</language><atom:link href="https://violentbinary.github.io/tags/" rel="self" type="application/rss+xml" /></channel>
+>>>>>>> a4ec3f3cfcac322b1b566a5c77c261bb59df8fa3
 </rss>
