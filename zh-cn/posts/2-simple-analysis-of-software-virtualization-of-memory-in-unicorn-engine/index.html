@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+        <title>Unicorn Engine 内存的软件虚拟化浅析 - Violent Binary</title><meta name="Description" content=""><meta property="og:title" content="Unicorn Engine 内存的软件虚拟化浅析" />
+<meta property="og:description" content="Unicorn Engine 由 QEMU 裁剪而来，可以说是 QEMU 的分支，但是又是一个完全独立的项目。Unicorn 提供了丰富的 API，让我们可以很方便的体验 QEMU 虚拟化技术带来的诸" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://violentbinary.github.io/zh-cn/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/" /><meta property="og:image" content="https://violentbinary.github.io/images/binary-code.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2022-04-14T23:33:18+08:00" />
+<meta property="article:modified_time" content="2022-04-14T23:33:18+08:00" /><meta property="og:site_name" content="Violent Binary" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://violentbinary.github.io/images/binary-code.png"/>
+
+<meta name="twitter:title" content="Unicorn Engine 内存的软件虚拟化浅析"/>
+<meta name="twitter:description" content="Unicorn Engine 由 QEMU 裁剪而来，可以说是 QEMU 的分支，但是又是一个完全独立的项目。Unicorn 提供了丰富的 API，让我们可以很方便的体验 QEMU 虚拟化技术带来的诸"/>
+<meta name="application-name" content="Violent Binary">
+<meta name="apple-mobile-web-app-title" content="Violent Binary"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://violentbinary.github.io/zh-cn/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/" /><link rel="stylesheet" href="/lib/normalize/normalize.min.css"><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="/lib/fontawesome-free/all.min.css"><link rel="stylesheet" href="/lib/animate/animate.min.css"><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "Unicorn Engine 内存的软件虚拟化浅析",
+        "inLanguage": "zh-CN",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/violentbinary.github.io\/zh-cn\/posts\/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine\/"
+        },"genre": "posts","keywords": "ELF, injection, Linux, patch","wordcount":  1675 ,
+        "url": "https:\/\/violentbinary.github.io\/zh-cn\/posts\/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine\/","datePublished": "2022-04-14T23:33:18+08:00","dateModified": "2022-04-14T23:33:18+08:00","publisher": {
+            "@type": "Organization",
+            "name": ""},"author": {
+                "@type": "Person",
+                "name": "liyansong"
+            },"description": ""
+    }
+    </script></head>
+    <body header-desktop="fixed" header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : '' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/zh-cn/" title="Violent Binary"><img
+        class="lazyload logo"
+        src="/svg/loading.min.svg"
+        data-src="/images/binary-code.png"
+        data-srcset="/images/binary-code.png, /images/binary-code.png 1.5x, /images/binary-code.png 2x"
+        data-sizes="auto"
+        alt="/images/binary-code.png"
+        title="/images/binary-code.png" /> Violent Binary</a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/zh-cn/posts/"> 文章 </a><a class="menu-item" href="/zh-cn/tags/"> 标签 </a><a class="menu-item" href="/zh-cn/categories/"> 分类 </a><a class="menu-item" href="https://github.com/liyansong2018" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i>  </a><span class="menu-item delimiter"></span><a href="javascript:void(0);" class="menu-item language" title="选择语言">简体中文<i class="fas fa-chevron-right fa-fw"></i>
+                        <select class="language-select" id="language-select-desktop" onchange="location = this.value;"><option value="/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/">English</option><option value="/zh-cn/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/" selected>简体中文</option></select>
+                    </a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                    <i class="fas fa-adjust fa-fw"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/zh-cn/" title="Violent Binary"><img
+        class="lazyload logo"
+        src="/svg/loading.min.svg"
+        data-src="/images/binary-code.png"
+        data-srcset="/images/binary-code.png, /images/binary-code.png 1.5x, /images/binary-code.png 2x"
+        data-sizes="auto"
+        alt="/images/binary-code.png"
+        title="/images/binary-code.png" /> Violent Binary</a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><a class="menu-item" href="/zh-cn/posts/" title="">文章</a><a class="menu-item" href="/zh-cn/tags/" title="">标签</a><a class="menu-item" href="/zh-cn/categories/" title="">分类</a><a class="menu-item" href="https://github.com/liyansong2018" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                <i class="fas fa-adjust fa-fw"></i>
+            </a><a href="javascript:void(0);" class="menu-item" title="选择语言">简体中文<i class="fas fa-chevron-right fa-fw"></i>
+                    <select class="language-select" onchange="location = this.value;"><option value="/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/">English</option><option value="/zh-cn/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/" selected>简体中文</option></select>
+                </a></div>
+    </div>
+</header>
+<div class="search-dropdown desktop">
+    <div id="search-dropdown-desktop"></div>
+</div>
+<div class="search-dropdown mobile">
+    <div id="search-dropdown-mobile"></div>
+</div>
+<main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">目录</h2>
+            <div class="toc-content always-active" id="toc-content-auto"></div>
+        </div><article class="page single"><h1 class="single-title animated flipInX">Unicorn Engine 内存的软件虚拟化浅析</h1><div class="post-meta">
+            <div class="post-meta-line"><span class="post-author"><a href="/zh-cn/" title="Author" rel=" author" class="author"><i class="fas fa-user-circle fa-fw"></i>liyansong</a></span>&nbsp;<span class="post-category">收录于 <a href="/zh-cn/categories/unicorn/"><i class="far fa-folder fa-fw"></i>Unicorn</a>&nbsp;<a href="/zh-cn/categories/qemu/"><i class="far fa-folder fa-fw"></i>QEMU</a>&nbsp;<a href="/zh-cn/categories/cve/"><i class="far fa-folder fa-fw"></i>CVE</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2022-04-14">2022-04-14</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 1675 字&nbsp;
+                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 4 分钟&nbsp;<span id="/zh-cn/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/" class="leancloud_visitors" data-flag-title="Unicorn Engine 内存的软件虚拟化浅析">
+                        <i class="far fa-eye fa-fw"></i>&nbsp;<span class=leancloud-visitors-count></span>&nbsp;次阅读
+                    </span>&nbsp;</div>
+        </div><div class="featured-image"><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/2-null-pointer/title.png"
+        data-srcset="/images/2-null-pointer/title.png, /images/2-null-pointer/title.png 1.5x, /images/2-null-pointer/title.png 2x"
+        data-sizes="auto"
+        alt="/images/2-null-pointer/title.png"
+        title="/images/2-null-pointer/title.png" /></div><div class="details toc" id="toc-static"  kept="">
+                <div class="details-summary toc-title">
+                    <span>目录</span>
+                    <span><i class="details-icon fas fa-angle-right"></i></span>
+                </div>
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#基础结构体">基础结构体</a>
+      <ul>
+        <li><a href="#memory-region">Memory Region</a></li>
+        <li><a href="#ram-block">RAM Block</a></li>
+      </ul>
+    </li>
+    <li><a href="#内存申请入口">内存申请入口</a>
+      <ul>
+        <li><a href="#申请-memory-region">申请 Memory Region</a></li>
+        <li><a href="#申请-ram-block">申请 RAM Block</a></li>
+        <li><a href="#非一致性结果导致的空指针">非一致性结果导致的空指针</a></li>
+      </ul>
+    </li>
+    <li><a href="#修复方案">修复方案</a></li>
+    <li><a href="#总结">总结</a></li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><p>Unicorn Engine 由 QEMU 裁剪而来，可以说是 QEMU 的分支，但是又是一个完全独立的项目。Unicorn 提供了丰富的 API，让我们可以很方便的体验 QEMU 虚拟化技术带来的诸多特性，但是同时也面临一些安全问题。我们以分析 CVE-2022-XXXX 漏洞为例，简要概述 Unicorn 内存虚拟化的原理。这里只做一些浅显的分析，让大家快速掌握 QEMU 虚拟化的全貌。</p>
+<h2 id="基础结构体">基础结构体</h2>
+<p>我们首先介绍 QEMU 中的两个重要的结构体，即 Memory Region 和 RAM Block。你也可以先看后面章节的具体代码，再回过头来看他们中的每个域成员的作用，以达到更好的理解效果。</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="../../../../images/2-null-pointer/MemoryManager.png"
+        data-srcset="../../../../images/2-null-pointer/MemoryManager.png, ../../../../images/2-null-pointer/MemoryManager.png 1.5x, ../../../../images/2-null-pointer/MemoryManager.png 2x"
+        data-sizes="auto"
+        alt="../../../../images/2-null-pointer/MemoryManager.png"
+        title="MemoryManager" /></p>
+<h3 id="memory-region">Memory Region</h3>
+<p>MemoryRegion 是 QEMU 内存管理中一个重要的结构体，是管理 GVA(Guest Virtual Address, 客户机即虚拟机中的虚拟空间地址) 每块内存空间的结构体。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-c" data-lang="c"><span class="k">struct</span> <span class="n">MemoryRegion</span> <span class="p">{</span>
+    <span class="cm">/* private: */</span>
+
+    <span class="cm">/* The following fields should fit in a cache line */</span>
+    <span class="kt">bool</span> <span class="n">ram</span><span class="p">;</span>					<span class="c1">// 
+</span><span class="c1"></span>    <span class="kt">bool</span> <span class="n">subpage</span><span class="p">;</span>
+    <span class="kt">bool</span> <span class="n">readonly</span><span class="p">;</span> 				<span class="c1">// 是否是只读
+</span><span class="c1"></span>    <span class="kt">bool</span> <span class="n">is_iommu</span><span class="p">;</span>
+    <span class="n">RAMBlock</span> <span class="o">*</span><span class="n">ram_block</span><span class="p">;</span>		<span class="c1">// 实际分配的物理内存
+</span><span class="c1"></span>
+    <span class="k">const</span> <span class="n">MemoryRegionOps</span> <span class="o">*</span><span class="n">ops</span><span class="p">;</span>
+    <span class="kt">void</span> <span class="o">*</span><span class="n">opaque</span><span class="p">;</span>
+    <span class="n">MemoryRegion</span> <span class="o">*</span><span class="n">container</span><span class="p">;</span>	<span class="c1">// 该MemoryRegion的上一级MemoryRegion
+</span><span class="c1"></span>    <span class="n">Int128</span> <span class="n">size</span><span class="p">;</span>
+    <span class="n">hwaddr</span> <span class="n">addr</span><span class="p">;</span>
+    <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">destructor</span><span class="p">)(</span><span class="n">MemoryRegion</span> <span class="o">*</span><span class="n">mr</span><span class="p">);</span>
+    <span class="kt">uint64_t</span> <span class="n">align</span><span class="p">;</span>
+    <span class="kt">bool</span> <span class="n">terminates</span><span class="p">;</span>
+    <span class="kt">bool</span> <span class="n">enabled</span><span class="p">;</span>
+    <span class="kt">int32_t</span> <span class="n">priority</span><span class="p">;</span>
+    <span class="n">QTAILQ_HEAD</span><span class="p">(,</span> <span class="n">MemoryRegion</span><span class="p">)</span> <span class="n">subregions</span><span class="p">;</span>
+    <span class="n">QTAILQ_ENTRY</span><span class="p">(</span><span class="n">MemoryRegion</span><span class="p">)</span> <span class="n">subregions_link</span><span class="p">;</span>
+
+    <span class="k">struct</span> <span class="n">uc_struct</span> <span class="o">*</span><span class="n">uc</span><span class="p">;</span>
+    <span class="kt">uint32_t</span> <span class="n">perms</span><span class="p">;</span>
+    <span class="n">hwaddr</span> <span class="n">end</span><span class="p">;</span>
+<span class="p">};</span>
+</code></pre></div><h3 id="ram-block">RAM Block</h3>
+<p>RAM Block 表示虚拟机中的一块内存条，即 <strong>GPA(Guest Physical Address, 虚拟机物理地址)</strong>。所有的 RAMBlock 会通过 next 域连接到链表中，链表头是 <code>ram_list.blocks</code>。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-c" data-lang="c"><span class="k">struct</span> <span class="n">RAMBlock</span> <span class="p">{</span>
+    <span class="k">struct</span> <span class="n">MemoryRegion</span> <span class="o">*</span><span class="n">mr</span><span class="p">;</span>		<span class="c1">// GPA-&gt;GVA，所属的MR
+</span><span class="c1"></span>    <span class="kt">uint8_t</span> <span class="o">*</span><span class="n">host</span><span class="p">;</span>					<span class="c1">// GPA-&gt;HVA
+</span><span class="c1"></span>    <span class="n">ram_addr_t</span> <span class="n">offset</span><span class="p">;</span>				<span class="c1">// 内存条在整个虚拟机中的偏移地址
+</span><span class="c1"></span>    <span class="n">ram_addr_t</span> <span class="n">used_length</span><span class="p">;</span>			<span class="c1">// 已经使用的大小
+</span><span class="c1"></span>    <span class="n">ram_addr_t</span> <span class="n">max_length</span><span class="p">;</span>
+    <span class="kt">uint32_t</span> <span class="n">flags</span><span class="p">;</span>
+    <span class="cm">/* RCU-enabled, writes protected by the ramlist lock */</span>
+    <span class="n">QLIST_ENTRY</span><span class="p">(</span><span class="n">RAMBlock</span><span class="p">)</span> <span class="n">next</span><span class="p">;</span>
+    <span class="n">size_t</span> <span class="n">page_size</span><span class="p">;</span>				<span class="c1">// 系统页面大小
+</span><span class="c1"></span><span class="p">};</span>
+</code></pre></div><h2 id="内存申请入口">内存申请入口</h2>
+<p><code>uc_mem_map</code> 是 Unicorn 提供给用户的接口，我们可以使用这个函数为模拟器申请一块内存空间，这个空间既可以存放将要模拟的指令，也可以用作虚拟机的堆栈。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-c" data-lang="c"><span class="n">uc_err</span> <span class="nf">uc_mem_map</span><span class="p">(</span><span class="n">uc_engine</span> <span class="o">*</span><span class="n">uc</span><span class="p">,</span> <span class="kt">uint64_t</span> <span class="n">address</span><span class="p">,</span> <span class="n">size_t</span> <span class="n">size</span><span class="p">,</span> <span class="kt">uint32_t</span> <span class="n">perms</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">uc_err</span> <span class="n">res</span><span class="p">;</span>	
+    
+    <span class="cm">/* 初始化unicorn引擎 */</span>
+    <span class="n">UC_INIT</span><span class="p">(</span><span class="n">uc</span><span class="p">);</span>	
+	
+    <span class="cm">/* 只在MIPS定义，假设我们要申请的内存超过一定范围
+</span><span class="cm">     * 自动重新申请符合系统要求的内存块
+</span><span class="cm">     */</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">uc</span><span class="o">-&gt;</span><span class="n">mem_redirect</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">address</span> <span class="o">=</span> <span class="n">uc</span><span class="o">-&gt;</span><span class="n">mem_redirect</span><span class="p">(</span><span class="n">address</span><span class="p">);</span>
+    <span class="p">}</span>
+	
+    <span class="cm">/* 用于内存安全检查，检查传入的地址范围 */</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">mem_map_check</span><span class="p">(</span><span class="n">uc</span><span class="p">,</span> <span class="n">address</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">perms</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">res</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="n">res</span><span class="p">;</span>
+    <span class="p">}</span>
+	
+    <span class="cm">/* mem_map 函数将QEMU申请的内存单独存入Unicorn提供的mapped_blocks
+</span><span class="cm">     * memory_map 利用QEMU的能力，申请内存（GVA）
+</span><span class="cm">     */</span>
+    <span class="k">return</span> <span class="n">mem_map</span><span class="p">(</span><span class="n">uc</span><span class="p">,</span> <span class="n">address</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">perms</span><span class="p">,</span>
+                   <span class="n">uc</span><span class="o">-&gt;</span><span class="n">memory_map</span><span class="p">(</span><span class="n">uc</span><span class="p">,</span> <span class="n">address</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">perms</span><span class="p">));</span>
+<span class="p">}</span>
+</code></pre></div><h3 id="申请-memory-region">申请 Memory Region</h3>
+<p>继续分析 <code>memory_map</code>，此函数定义在 <code>qemu/softmmu/memory.c</code> 文件中，用于正式申请 Memory Region。从函数 <code>memory_region_add_subregion</code> 可以看出来，Unicorn 使用 uc-&gt;system_memory 作为一个管理所有 Region 的父集。</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="../../../../images/2-null-pointer/MemoryRegion.png"
+        data-srcset="../../../../images/2-null-pointer/MemoryRegion.png, ../../../../images/2-null-pointer/MemoryRegion.png 1.5x, ../../../../images/2-null-pointer/MemoryRegion.png 2x"
+        data-sizes="auto"
+        alt="../../../../images/2-null-pointer/MemoryRegion.png"
+        title="MemoryRegion" /></p>
+<p>代码</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-c" data-lang="c"><span class="n">MemoryRegion</span> <span class="o">*</span><span class="nf">memory_map</span><span class="p">(</span><span class="k">struct</span> <span class="n">uc_struct</span> <span class="o">*</span><span class="n">uc</span><span class="p">,</span> <span class="n">hwaddr</span> <span class="n">begin</span><span class="p">,</span> <span class="n">size_t</span> <span class="n">size</span><span class="p">,</span> <span class="kt">uint32_t</span> <span class="n">perms</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="cm">/* ram是待分配的 */</span>
+    <span class="n">MemoryRegion</span> <span class="o">*</span><span class="n">ram</span> <span class="o">=</span> <span class="n">g_new</span><span class="p">(</span><span class="n">MemoryRegion</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+	
+    <span class="cm">/* 分配虚拟机RAM */</span>
+    <span class="n">memory_region_init_ram</span><span class="p">(</span><span class="n">uc</span><span class="p">,</span> <span class="n">ram</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">perms</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">ram</span><span class="o">-&gt;</span><span class="n">addr</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+        <span class="c1">// out of memory
+</span><span class="c1"></span>        <span class="k">return</span> <span class="nb">NULL</span><span class="p">;</span>
+    <span class="p">}</span>
+	
+    <span class="cm">/* 将一个MemoryRegion添加到另外一个MemoryRegion，使其成为另外一个MemoryRegion
+</span><span class="cm">     * 的子集
+</span><span class="cm">     */</span>
+    <span class="n">memory_region_add_subregion</span><span class="p">(</span><span class="n">uc</span><span class="o">-&gt;</span><span class="n">system_memory</span><span class="p">,</span> <span class="n">begin</span><span class="p">,</span> <span class="n">ram</span><span class="p">);</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">uc</span><span class="o">-&gt;</span><span class="n">cpu</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">tlb_flush</span><span class="p">(</span><span class="n">uc</span><span class="o">-&gt;</span><span class="n">cpu</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="k">return</span> <span class="n">ram</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div><p><strong>GVA(Guest Virtual Address，即虚拟机中的虚拟地址空间)</strong>。<code>memory_region_init_ram</code> 是虚拟机申请 RAM 的一个重要函数。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-c" data-lang="c"><span class="kt">void</span> <span class="nf">memory_region_init_ram</span><span class="p">(</span><span class="k">struct</span> <span class="n">uc_struct</span> <span class="o">*</span><span class="n">uc</span><span class="p">,</span>
+                            <span class="n">MemoryRegion</span> <span class="o">*</span><span class="n">mr</span><span class="p">,</span>
+                            <span class="kt">uint64_t</span> <span class="n">size</span><span class="p">,</span>
+                            <span class="kt">uint32_t</span> <span class="n">perms</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="cm">/* 初始化申请的MR */</span>
+    <span class="n">memory_region_init</span><span class="p">(</span><span class="n">uc</span><span class="p">,</span> <span class="n">mr</span><span class="p">,</span> <span class="n">size</span><span class="p">);</span>
+    <span class="n">mr</span><span class="o">-&gt;</span><span class="n">ram</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="p">(</span><span class="n">perms</span> <span class="o">&amp;</span> <span class="n">UC_PROT_WRITE</span><span class="p">))</span> <span class="p">{</span>
+        <span class="n">mr</span><span class="o">-&gt;</span><span class="n">readonly</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="n">mr</span><span class="o">-&gt;</span><span class="n">perms</span> <span class="o">=</span> <span class="n">perms</span><span class="p">;</span>		<span class="c1">// 权限
+</span><span class="c1"></span>    <span class="n">mr</span><span class="o">-&gt;</span><span class="n">terminates</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+    <span class="n">mr</span><span class="o">-&gt;</span><span class="n">destructor</span> <span class="o">=</span> <span class="n">memory_region_destructor_ram</span><span class="p">;</span>
+    <span class="cm">/* 重要！用于申请GPA和HVA */</span>
+    <span class="n">mr</span><span class="o">-&gt;</span><span class="n">ram_block</span> <span class="o">=</span> <span class="n">qemu_ram_alloc</span><span class="p">(</span><span class="n">uc</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">mr</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div><p>函数 <code>qemu_ram_alloc</code> 是 <code>qemu_ram_alloc_from_ptr</code>的封装，是用来申请 RAMBlock 的地方。</p>
+<h3 id="申请-ram-block">申请 RAM Block</h3>
+<p>RAMBlock 初始化如下</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-c" data-lang="c"><span class="n">RAMBlock</span> <span class="o">*</span><span class="nf">qemu_ram_alloc_from_ptr</span><span class="p">(</span><span class="k">struct</span> <span class="n">uc_struct</span> <span class="o">*</span><span class="n">uc</span><span class="p">,</span> <span class="n">ram_addr_t</span> <span class="n">size</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">host</span><span class="p">,</span>
+                                   <span class="n">MemoryRegion</span> <span class="o">*</span><span class="n">mr</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">RAMBlock</span> <span class="o">*</span><span class="n">new_block</span><span class="p">;</span>
+    <span class="n">ram_addr_t</span> <span class="n">max_size</span> <span class="o">=</span> <span class="n">size</span><span class="p">;</span>
+
+    <span class="n">size</span> <span class="o">=</span> <span class="n">HOST_PAGE_ALIGN</span><span class="p">(</span><span class="n">uc</span><span class="p">,</span> <span class="n">size</span><span class="p">);</span>
+    <span class="n">max_size</span> <span class="o">=</span> <span class="n">HOST_PAGE_ALIGN</span><span class="p">(</span><span class="n">uc</span><span class="p">,</span> <span class="n">max_size</span><span class="p">);</span>
+    <span class="n">new_block</span> <span class="o">=</span> <span class="n">g_malloc0</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="o">*</span><span class="n">new_block</span><span class="p">));</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">new_block</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">NULL</span><span class="p">;</span>
+    <span class="n">new_block</span><span class="o">-&gt;</span><span class="n">mr</span> <span class="o">=</span> <span class="n">mr</span><span class="p">;</span>
+    <span class="n">new_block</span><span class="o">-&gt;</span><span class="n">used_length</span> <span class="o">=</span> <span class="n">size</span><span class="p">;</span>
+    <span class="n">new_block</span><span class="o">-&gt;</span><span class="n">max_length</span> <span class="o">=</span> <span class="n">max_size</span><span class="p">;</span>
+    <span class="n">assert</span><span class="p">(</span><span class="n">max_size</span> <span class="o">&gt;=</span> <span class="n">size</span><span class="p">);</span>
+    <span class="n">new_block</span><span class="o">-&gt;</span><span class="n">page_size</span> <span class="o">=</span> <span class="n">uc</span><span class="o">-&gt;</span><span class="n">qemu_real_host_page_size</span><span class="p">;</span>
+    <span class="n">new_block</span><span class="o">-&gt;</span><span class="n">host</span> <span class="o">=</span> <span class="n">host</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">host</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">new_block</span><span class="o">-&gt;</span><span class="n">flags</span> <span class="o">|=</span> <span class="n">RAM_PREALLOC</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="n">ram_block_add</span><span class="p">(</span><span class="n">mr</span><span class="o">-&gt;</span><span class="n">uc</span><span class="p">,</span> <span class="n">new_block</span><span class="p">);</span>
+
+    <span class="k">return</span> <span class="n">new_block</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div><p>函数 <code>ram_block_add</code> 用于将一根内存条添加到系统中，此函数首先申请 PVA，再将 RAMBlock 添加到系统空间中。</p>
+<h3 id="非一致性结果导致的空指针">非一致性结果导致的空指针</h3>
+<p>QEMU 虚拟机申请内存，最终还是需要在宿主机上申请相应的内存。那么问题来了，当虚拟机申请一块超大内存时，实际申请必然失败。而下面的函数没有返回申请结果的状态，当前这个 RAMBlock 也没有被添加到 <code>ram_list.blocks</code></p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="../../../../images/2-null-pointer/CVE-2022.png"
+        data-srcset="../../../../images/2-null-pointer/CVE-2022.png, ../../../../images/2-null-pointer/CVE-2022.png 1.5x, ../../../../images/2-null-pointer/CVE-2022.png 2x"
+        data-sizes="auto"
+        alt="../../../../images/2-null-pointer/CVE-2022.png"
+        title="CVE-2022" /></p>
+<p>上层函数并没有判断 HVA 申请是否成功，而虚拟机默认 GVA 已经申请成功。在关闭虚拟机的时候，触发 QEMU Memory Free，这时候这个 Block 其实还不是一个 QLIST，导致空指针解引用。</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="../../../../images/2-null-pointer/CVE-2022-1.png"
+        data-srcset="../../../../images/2-null-pointer/CVE-2022-1.png, ../../../../images/2-null-pointer/CVE-2022-1.png 1.5x, ../../../../images/2-null-pointer/CVE-2022-1.png 2x"
+        data-sizes="auto"
+        alt="../../../../images/2-null-pointer/CVE-2022-1.png"
+        title="CVE-2022-1" /></p>
+<p>如下所示，虚拟机申请大内存时，GVA 申请成功，但是 GPA-&gt;HVA 使用 mmap 函数申请失败。未同步申请的内存导致空指针。</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="../../../../images/2-null-pointer/CVE-2022-2.png"
+        data-srcset="../../../../images/2-null-pointer/CVE-2022-2.png, ../../../../images/2-null-pointer/CVE-2022-2.png 1.5x, ../../../../images/2-null-pointer/CVE-2022-2.png 2x"
+        data-sizes="auto"
+        alt="../../../../images/2-null-pointer/CVE-2022-2.png"
+        title="CVE-2022-2" /></p>
+<h2 id="修复方案">修复方案</h2>
+<p>第一种修复方式比较简单，直接使用 QEMU 提供的 QLIST 链表的安全删除方法，即 <code>QLIST_SAFE_REMOVE</code></p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="../../../../images/2-null-pointer/fix-1.png"
+        data-srcset="../../../../images/2-null-pointer/fix-1.png, ../../../../images/2-null-pointer/fix-1.png 1.5x, ../../../../images/2-null-pointer/fix-1.png 2x"
+        data-sizes="auto"
+        alt="../../../../images/2-null-pointer/fix-1.png"
+        title="fix-1" /></p>
+<p>第二种修复方案似乎更为合理，因为这个问题的本质其实是 GVA 与 GPA 申请结果的判断不一致导致的，因此要修改逻辑，添加内存申请一致性判断。</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="../../../../images/2-null-pointer/fix-2.png"
+        data-srcset="../../../../images/2-null-pointer/fix-2.png, ../../../../images/2-null-pointer/fix-2.png 1.5x, ../../../../images/2-null-pointer/fix-2.png 2x"
+        data-sizes="auto"
+        alt="../../../../images/2-null-pointer/fix-2.png"
+        title="fix-2" /></p>
+<h2 id="总结">总结</h2>
+<p>本文只是初步分析了 Unicorn Engine 内存虚拟化的过程，介绍了 QEMU 为虚拟机申请内存的大致方案。QEMU 内存虚拟化是一个复杂的过程，背后更多的机制有待后续进一步研究。</p>
+</div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>更新于 2022-04-14</span>
+            </div>
+            <div class="post-info-license"></div>
+        </div>
+        <div class="post-info-line">
+            <div class="post-info-md"></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://violentbinary.github.io/zh-cn/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/" data-title="Unicorn Engine 内存的软件虚拟化浅析" data-hashtags="ELF,injection,Linux,patch"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://violentbinary.github.io/zh-cn/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/" data-hashtag="ELF"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="分享到 WhatsApp" data-sharer="whatsapp" data-url="https://violentbinary.github.io/zh-cn/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/" data-title="Unicorn Engine 内存的软件虚拟化浅析" data-web><i class="fab fa-whatsapp fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://violentbinary.github.io/zh-cn/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/" data-title="Unicorn Engine 内存的软件虚拟化浅析"><i data-svg-src="/lib/simple-icons/icons/line.min.svg"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://violentbinary.github.io/zh-cn/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/" data-title="Unicorn Engine 内存的软件虚拟化浅析" data-image="/images/2-null-pointer/title.png"><i class="fab fa-weibo fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Myspace" data-sharer="myspace" data-url="https://violentbinary.github.io/zh-cn/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/" data-title="Unicorn Engine 内存的软件虚拟化浅析" data-description=""><i data-svg-src="/lib/simple-icons/icons/myspace.min.svg"></i></a><a href="javascript:void(0);" title="分享到 Blogger" data-sharer="blogger" data-url="https://violentbinary.github.io/zh-cn/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/" data-title="Unicorn Engine 内存的软件虚拟化浅析" data-description=""><i class="fab fa-blogger fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Evernote" data-sharer="evernote" data-url="https://violentbinary.github.io/zh-cn/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/" data-title="Unicorn Engine 内存的软件虚拟化浅析"><i class="fab fa-evernote fa-fw"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/zh-cn/tags/elf/">ELF</a>,&nbsp;<a href="/zh-cn/tags/injection/">injection</a>,&nbsp;<a href="/zh-cn/tags/linux/">Linux</a>,&nbsp;<a href="/zh-cn/tags/patch/">patch</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/zh-cn/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"></div>
+</div>
+<div id="comments"><div id="valine" class="comment"></div><noscript>
+                Please enable JavaScript to view the comments powered by <a href="https://valine.js.org/">Valine</a>.
+            </noscript></div></article></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.89.0">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+                </div><div class="footer-line"><i class="far fa-copyright fa-fw"></i><span itemprop="copyrightYear">2021 - 2022</span><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/zh-cn/" target="_blank">liyansong</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="回到顶部">
+                <i class="fas fa-arrow-up fa-fw"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="查看评论">
+                <i class="fas fa-comment fa-fw"></i>
+            </a>
+        </div><link rel="stylesheet" href="/lib/valine/valine.min.css"><link rel="stylesheet" href="/lib/katex/katex.min.css"><link rel="stylesheet" href="/lib/katex/copy-tex.min.css"><script type="text/javascript" src="/lib/valine/Valine.min.js"></script><script type="text/javascript" src="/lib/smooth-scroll/smooth-scroll.min.js"></script><script type="text/javascript" src="/lib/lazysizes/lazysizes.min.js"></script><script type="text/javascript" src="/lib/clipboard/clipboard.min.js"></script><script type="text/javascript" src="/lib/sharer/sharer.min.js"></script><script type="text/javascript" src="/lib/katex/katex.min.js"></script><script type="text/javascript" src="/lib/katex/auto-render.min.js"></script><script type="text/javascript" src="/lib/katex/copy-tex.min.js"></script><script type="text/javascript" src="/lib/katex/mhchem.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":25},"comment":{"valine":{"appId":"q4D7e9PV947z2sjUVfcdd6La-gzGzoHsz","appKey":"Md5Rqz1xNzFWnEjjS1DfaFsy","avatar":"mp","el":"#valine","emojiCDN":"https://cdn.jsdelivr.net/npm/emoji-datasource-google@5.0.1/img/google/64/","emojiMaps":{"100":"1f4af.png","alien":"1f47d.png","anger":"1f4a2.png","angry":"1f620.png","anguished":"1f627.png","astonished":"1f632.png","black_heart":"1f5a4.png","blue_heart":"1f499.png","blush":"1f60a.png","bomb":"1f4a3.png","boom":"1f4a5.png","broken_heart":"1f494.png","brown_heart":"1f90e.png","clown_face":"1f921.png","cold_face":"1f976.png","cold_sweat":"1f630.png","confounded":"1f616.png","confused":"1f615.png","cry":"1f622.png","crying_cat_face":"1f63f.png","cupid":"1f498.png","dash":"1f4a8.png","disappointed":"1f61e.png","disappointed_relieved":"1f625.png","dizzy":"1f4ab.png","dizzy_face":"1f635.png","drooling_face":"1f924.png","exploding_head":"1f92f.png","expressionless":"1f611.png","face_vomiting":"1f92e.png","face_with_cowboy_hat":"1f920.png","face_with_hand_over_mouth":"1f92d.png","face_with_head_bandage":"1f915.png","face_with_monocle":"1f9d0.png","face_with_raised_eyebrow":"1f928.png","face_with_rolling_eyes":"1f644.png","face_with_symbols_on_mouth":"1f92c.png","face_with_thermometer":"1f912.png","fearful":"1f628.png","flushed":"1f633.png","frowning":"1f626.png","ghost":"1f47b.png","gift_heart":"1f49d.png","green_heart":"1f49a.png","grimacing":"1f62c.png","grin":"1f601.png","grinning":"1f600.png","hankey":"1f4a9.png","hear_no_evil":"1f649.png","heart":"2764-fe0f.png","heart_decoration":"1f49f.png","heart_eyes":"1f60d.png","heart_eyes_cat":"1f63b.png","heartbeat":"1f493.png","heartpulse":"1f497.png","heavy_heart_exclamation_mark_ornament":"2763-fe0f.png","hole":"1f573-fe0f.png","hot_face":"1f975.png","hugging_face":"1f917.png","hushed":"1f62f.png","imp":"1f47f.png","innocent":"1f607.png","japanese_goblin":"1f47a.png","japanese_ogre":"1f479.png","joy":"1f602.png","joy_cat":"1f639.png","kiss":"1f48b.png","kissing":"1f617.png","kissing_cat":"1f63d.png","kissing_closed_eyes":"1f61a.png","kissing_heart":"1f618.png","kissing_smiling_eyes":"1f619.png","laughing":"1f606.png","left_speech_bubble":"1f5e8-fe0f.png","love_letter":"1f48c.png","lying_face":"1f925.png","mask":"1f637.png","money_mouth_face":"1f911.png","nauseated_face":"1f922.png","nerd_face":"1f913.png","neutral_face":"1f610.png","no_mouth":"1f636.png","open_mouth":"1f62e.png","orange_heart":"1f9e1.png","partying_face":"1f973.png","pensive":"1f614.png","persevere":"1f623.png","pleading_face":"1f97a.png","pouting_cat":"1f63e.png","purple_heart":"1f49c.png","rage":"1f621.png","relaxed":"263a-fe0f.png","relieved":"1f60c.png","revolving_hearts":"1f49e.png","right_anger_bubble":"1f5ef-fe0f.png","robot_face":"1f916.png","rolling_on_the_floor_laughing":"1f923.png","scream":"1f631.png","scream_cat":"1f640.png","see_no_evil":"1f648.png","shushing_face":"1f92b.png","skull":"1f480.png","skull_and_crossbones":"2620-fe0f.png","sleeping":"1f634.png","sleepy":"1f62a.png","slightly_frowning_face":"1f641.png","slightly_smiling_face":"1f642.png","smile":"1f604.png","smile_cat":"1f638.png","smiley":"1f603.png","smiley_cat":"1f63a.png","smiling_face_with_3_hearts":"1f970.png","smiling_imp":"1f608.png","smirk":"1f60f.png","smirk_cat":"1f63c.png","sneezing_face":"1f927.png","sob":"1f62d.png","space_invader":"1f47e.png","sparkling_heart":"1f496.png","speak_no_evil":"1f64a.png","speech_balloon":"1f4ac.png","star-struck":"1f929.png","stuck_out_tongue":"1f61b.png","stuck_out_tongue_closed_eyes":"1f61d.png","stuck_out_tongue_winking_eye":"1f61c.png","sunglasses":"1f60e.png","sweat":"1f613.png","sweat_drops":"1f4a6.png","sweat_smile":"1f605.png","thinking_face":"1f914.png","thought_balloon":"1f4ad.png","tired_face":"1f62b.png","triumph":"1f624.png","two_hearts":"1f495.png","unamused":"1f612.png","upside_down_face":"1f643.png","weary":"1f629.png","white_frowning_face":"2639-fe0f.png","white_heart":"1f90d.png","wink":"1f609.png","woozy_face":"1f974.png","worried":"1f61f.png","yawning_face":"1f971.png","yellow_heart":"1f49b.png","yum":"1f60b.png","zany_face":"1f92a.png","zipper_mouth_face":"1f910.png","zzz":"1f4a4.png"},"enableQQ":false,"highlight":true,"lang":"zh-cn","pageSize":10,"placeholder":"你的评论 ...","recordIP":true,"serverURLs":"https://leancloud.hugoloveit.com","visitor":true}},"math":{"delimiters":[{"display":true,"left":"$$","right":"$$"},{"display":true,"left":"\\[","right":"\\]"},{"display":false,"left":"$","right":"$"},{"display":false,"left":"\\(","right":"\\)"}],"strict":false}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>

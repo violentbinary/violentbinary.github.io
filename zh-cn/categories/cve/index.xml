@@ -1,0 +1,16 @@
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+        <title>CVE - 分类 - Violent Binary</title>
+        <link>https://violentbinary.github.io/zh-cn/categories/cve/</link>
+        <description>CVE - 分类 - Violent Binary</description>
+        <generator>Hugo -- gohugo.io</generator><language>zh-CN</language><lastBuildDate>Thu, 14 Apr 2022 23:33:18 &#43;0800</lastBuildDate><atom:link href="https://violentbinary.github.io/zh-cn/categories/cve/" rel="self" type="application/rss+xml" /><item>
+    <title>Unicorn Engine 内存的软件虚拟化浅析</title>
+    <link>https://violentbinary.github.io/zh-cn/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/</link>
+    <pubDate>Thu, 14 Apr 2022 23:33:18 &#43;0800</pubDate>
+    <author>作者</author>
+    <guid>https://violentbinary.github.io/zh-cn/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/</guid>
+    <description><![CDATA[<div class="featured-image">
+                <img src="/images/2-null-pointer/title.png" referrerpolicy="no-referrer">
+            </div>Unicorn Engine 由 QEMU 裁剪而来，可以说是 QEMU 的分支，但是又是一个完全独立的项目。Unicorn 提供了丰富的 API，让我们可以很方便的体验 QEMU 虚拟化技术带来的诸]]></description>
+</item></channel>
+</rss>
