@@ -307,7 +307,7 @@
     </a><figcaption class="image-caption">Alloc memory in GPA->HVA</figcaption>
     </figure></p>
 <p>The upper layer function does not judge whether the applied HVA is successful, but the virtual machine defaults that the applied GVA has been successful. When the virtual machine is shut down, QEMU memory free is triggered. At this time, the block is not QLIST, resulting in null pointer dereference.</p>
-<p><figure><a class="lightgallery" href="../../../../images/2-null-pointer/CVE-2022-1.png" title="CVE-2022-1" data-thumbnail="../../../../images/2-null-pointer/CVE-2022-1.png" data-sub-html="<h2>Null pinter when free QEMU ram</h2><p>CVE-2022-1</p>">
+<p><figure><a class="lightgallery" href="../../../../images/2-null-pointer/CVE-2022-1.png" title="CVE-2022-1" data-thumbnail="../../../../images/2-null-pointer/CVE-2022-1.png" data-sub-html="<h2>Null pinter to free QEMU ram</h2><p>CVE-2022-1</p>">
         <img
             class="lazyload"
             src="/svg/loading.min.svg"
@@ -315,10 +315,10 @@
             data-srcset="../../../../images/2-null-pointer/CVE-2022-1.png, ../../../../images/2-null-pointer/CVE-2022-1.png 1.5x, ../../../../images/2-null-pointer/CVE-2022-1.png 2x"
             data-sizes="auto"
             alt="../../../../images/2-null-pointer/CVE-2022-1.png" />
-    </a><figcaption class="image-caption">Null pinter when free QEMU ram</figcaption>
+    </a><figcaption class="image-caption">Null pinter to free QEMU ram</figcaption>
     </figure></p>
 <p>As shown below, when the virtual machine applies for large memory, the GVA is successful, but the GPA-&gt;HVA using the <code>mmap</code> function fails. Unsynchronized allocated memory results in a null pointer.</p>
-<p><figure><a class="lightgallery" href="../../../../images/2-null-pointer/CVE-2022-2.png" title="CVE-2022-2" data-thumbnail="../../../../images/2-null-pointer/CVE-2022-2.png" data-sub-html="<h2>Causes of vulnerability</h2><p>CVE-2022-2</p>">
+<p><figure><a class="lightgallery" href="../../../../images/2-null-pointer/CVE-2022-2.png" title="CVE-2022-2" data-thumbnail="../../../../images/2-null-pointer/CVE-2022-2.png" data-sub-html="<h2>Analysis of vulnerability</h2><p>CVE-2022-2</p>">
         <img
             class="lazyload"
             src="/svg/loading.min.svg"
@@ -326,7 +326,7 @@
             data-srcset="../../../../images/2-null-pointer/CVE-2022-2.png, ../../../../images/2-null-pointer/CVE-2022-2.png 1.5x, ../../../../images/2-null-pointer/CVE-2022-2.png 2x"
             data-sizes="auto"
             alt="../../../../images/2-null-pointer/CVE-2022-2.png" />
-    </a><figcaption class="image-caption">Causes of vulnerability</figcaption>
+    </a><figcaption class="image-caption">Analysis of vulnerability</figcaption>
     </figure></p>
 <h2 id="fixs">Fixs</h2>
 <p>The first repair method is relatively simple, directly using <code>QLIST_SAFE_REMOVE</code> provided by QEMU.</p>
