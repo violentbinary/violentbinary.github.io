@@ -1,8 +1,8 @@
 <rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
     <channel>
-        <title>reverse engineering - Category - Violent Binary</title>
+        <title>Reverse Engineering - Category - Violent Binary</title>
         <link>https://violentbinary.github.io/categories/reverse-engineering/</link>
-        <description>reverse engineering - Category - Violent Binary</description>
+        <description>Reverse Engineering - Category - Violent Binary</description>
         <generator>Hugo -- gohugo.io</generator><language>en</language><lastBuildDate>Sun, 07 Nov 2021 21:13:39 &#43;0800</lastBuildDate><atom:link href="https://violentbinary.github.io/categories/reverse-engineering/" rel="self" type="application/rss+xml" /><item>
     <title>ELF Static Injection to Load Malicious Dynamic Link Library</title>
     <link>https://violentbinary.github.io/posts/1-elf-static-injection-to-load-malicious-dynamic-link-library/</link>

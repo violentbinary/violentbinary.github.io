@@ -29,7 +29,7 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/violentbinary.github.io\/posts\/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine\/"
-        },"genre": "posts","keywords": "ELF, injection, Linux, patch","wordcount":  952 ,
+        },"genre": "posts","keywords": "Unicorn, QEMU, CVE","wordcount":  1009 ,
         "url": "https:\/\/violentbinary.github.io\/posts\/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine\/","datePublished": "2022-04-14T23:11:10+08:00","dateModified": "2022-04-14T23:11:10+08:00","publisher": {
             "@type": "Organization",
             "name": ""},"author": {
@@ -96,8 +96,8 @@
             <h2 class="toc-title">Contents</h2>
             <div class="toc-content always-active" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animated flipInX">Simple Analysis of Software Virtualization of Memory in Unicorn Engine</h1><div class="post-meta">
-            <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel=" author" class="author"><i class="fas fa-user-circle fa-fw"></i>liyansong</a></span>&nbsp;<span class="post-category">included in <a href="/categories/unicorn/"><i class="far fa-folder fa-fw"></i>Unicorn</a>&nbsp;<a href="/categories/qemu/"><i class="far fa-folder fa-fw"></i>QEMU</a>&nbsp;<a href="/categories/cve/"><i class="far fa-folder fa-fw"></i>CVE</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2022-04-14">2022-04-14</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;952 words&nbsp;
+            <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel=" author" class="author"><i class="fas fa-user-circle fa-fw"></i>liyansong</a></span>&nbsp;<span class="post-category">included in <a href="/categories/virtualization/"><i class="far fa-folder fa-fw"></i>Virtualization</a>&nbsp;<a href="/categories/vulnerability-analysis/"><i class="far fa-folder fa-fw"></i>Vulnerability Analysis</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2022-04-14">2022-04-14</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;1009 words&nbsp;
                 <i class="far fa-clock fa-fw"></i>&nbsp;5 minutes&nbsp;<span id="/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/" class="leancloud_visitors" data-flag-title="Simple Analysis of Software Virtualization of Memory in Unicorn Engine">
                         <i class="far fa-eye fa-fw"></i>&nbsp;<span class=leancloud-visitors-count></span>&nbsp;views
                     </span>&nbsp;</div>
@@ -135,14 +135,16 @@
             </div><div class="content" id="content"><p>Unicorn Engine is cut from QEMU, it can be said to be a branch of QEMU, but it is a completely independent project. Unicorn provides a wealth of APIs, allowing us to easily experience many features brought by QEMU virtualization technology, but it also faces some security issues. We take the analysis of CVE-2022-XXXX as an example to briefly outline the principle of Unicorn memory virtualization. Only some simple analysis is made here, so that everyone can quickly grasp the whole picture of QEMU virtualization.</p>
 <h2 id="important-structure">Important Structure</h2>
 <p>We first introduce two important structures in QEMU, namely <code>MemoryRegion</code> and <code>RAMBlock</code>. You can also look at the specific code in the following chapters, and then look back at the role of each domain member in them to achieve a better understanding.</p>
-<p><img
-        class="lazyload"
-        src="/svg/loading.min.svg"
-        data-src="../../../../images/2-null-pointer/MemoryManager.png"
-        data-srcset="../../../../images/2-null-pointer/MemoryManager.png, ../../../../images/2-null-pointer/MemoryManager.png 1.5x, ../../../../images/2-null-pointer/MemoryManager.png 2x"
-        data-sizes="auto"
-        alt="../../../../images/2-null-pointer/MemoryManager.png"
-        title="MemoryManager" /></p>
+<p><figure><a class="lightgallery" href="../../../../images/2-null-pointer/MemoryManager.png" title="MemoryManager" data-thumbnail="../../../../images/2-null-pointer/MemoryManager.png" data-sub-html="<h2>Structure of memory manager</h2><p>MemoryManager</p>">
+        <img
+            class="lazyload"
+            src="/svg/loading.min.svg"
+            data-src="../../../../images/2-null-pointer/MemoryManager.png"
+            data-srcset="../../../../images/2-null-pointer/MemoryManager.png, ../../../../images/2-null-pointer/MemoryManager.png 1.5x, ../../../../images/2-null-pointer/MemoryManager.png 2x"
+            data-sizes="auto"
+            alt="../../../../images/2-null-pointer/MemoryManager.png" />
+    </a><figcaption class="image-caption">Structure of memory manager</figcaption>
+    </figure></p>
 <h3 id="memory-region">Memory Region</h3>
 <p>MemoryRegion is an important structure in QEMU memory management, and it is a structure that manages each memory space of GVA(Guest Virtual Address).</p>
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-c" data-lang="c"><span class="k">struct</span> <span class="n">MemoryRegion</span> <span class="p">{</span>
@@ -213,14 +215,16 @@
 <span class="p">}</span>
 </code></pre></div><h3 id="apply-for-memory-region">Apply for Memory Region</h3>
 <p>Continue to analyze <code>memory_map</code>, this function is defined in <code>qemu/softmmu/memory.c</code> file, used to formally apply for Memory Region. As can be seen from the function <code>memory_region_add_subregion</code>, Unicorn uses uc-&gt;system_memory as a parent set to manage all Regions.</p>
-<p><img
-        class="lazyload"
-        src="/svg/loading.min.svg"
-        data-src="../../../../images/2-null-pointer/MemoryRegion.png"
-        data-srcset="../../../../images/2-null-pointer/MemoryRegion.png, ../../../../images/2-null-pointer/MemoryRegion.png 1.5x, ../../../../images/2-null-pointer/MemoryRegion.png 2x"
-        data-sizes="auto"
-        alt="../../../../images/2-null-pointer/MemoryRegion.png"
-        title="MemoryRegion" /></p>
+<p><figure><a class="lightgallery" href="../../../../images/2-null-pointer/MemoryRegion.png" title="MemoryRegion" data-thumbnail="../../../../images/2-null-pointer/MemoryRegion.png" data-sub-html="<h2>Memory region in QEMU</h2><p>MemoryRegion</p>">
+        <img
+            class="lazyload"
+            src="/svg/loading.min.svg"
+            data-src="../../../../images/2-null-pointer/MemoryRegion.png"
+            data-srcset="../../../../images/2-null-pointer/MemoryRegion.png, ../../../../images/2-null-pointer/MemoryRegion.png 1.5x, ../../../../images/2-null-pointer/MemoryRegion.png 2x"
+            data-sizes="auto"
+            alt="../../../../images/2-null-pointer/MemoryRegion.png" />
+    </a><figcaption class="image-caption">Memory region in QEMU</figcaption>
+    </figure></p>
 <p>Code</p>
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-c" data-lang="c"><span class="n">MemoryRegion</span> <span class="o">*</span><span class="nf">memory_map</span><span class="p">(</span><span class="k">struct</span> <span class="n">uc_struct</span> <span class="o">*</span><span class="n">uc</span><span class="p">,</span> <span class="n">hwaddr</span> <span class="n">begin</span><span class="p">,</span> <span class="n">size_t</span> <span class="n">size</span><span class="p">,</span> <span class="kt">uint32_t</span> <span class="n">perms</span><span class="p">)</span>
 <span class="p">{</span>
@@ -292,51 +296,61 @@
 </code></pre></div><p>The function <code>ram_block_add</code> is used to add a memory stick to the system. This function first applies for PVA(Physical Virutal Address), and then adds RAMBlock to the system space.</p>
 <h3 id="cve-2022-xxxx">CVE-2022-XXXX</h3>
 <p>The QEMU virtual machine applies for memory, and finally needs to apply for the corresponding memory on the host. Then the problem arises. When a virtual machine applies for a large memory, the actual application will inevitably fail. The following function does not return the status of the application result, and the current RAMBlock has not been added to <code>ram_list.blocks</code>.</p>
-<p><img
-        class="lazyload"
-        src="/svg/loading.min.svg"
-        data-src="../../../../images/2-null-pointer/CVE-2022.png"
-        data-srcset="../../../../images/2-null-pointer/CVE-2022.png, ../../../../images/2-null-pointer/CVE-2022.png 1.5x, ../../../../images/2-null-pointer/CVE-2022.png 2x"
-        data-sizes="auto"
-        alt="../../../../images/2-null-pointer/CVE-2022.png"
-        title="CVE-2022" /></p>
+<p><figure><a class="lightgallery" href="../../../../images/2-null-pointer/CVE-2022.png" title="CVE-2022" data-thumbnail="../../../../images/2-null-pointer/CVE-2022.png" data-sub-html="<h2>Alloc memory in GPA-&gt;HVA</h2><p>CVE-2022</p>">
+        <img
+            class="lazyload"
+            src="/svg/loading.min.svg"
+            data-src="../../../../images/2-null-pointer/CVE-2022.png"
+            data-srcset="../../../../images/2-null-pointer/CVE-2022.png, ../../../../images/2-null-pointer/CVE-2022.png 1.5x, ../../../../images/2-null-pointer/CVE-2022.png 2x"
+            data-sizes="auto"
+            alt="../../../../images/2-null-pointer/CVE-2022.png" />
+    </a><figcaption class="image-caption">Alloc memory in GPA->HVA</figcaption>
+    </figure></p>
 <p>The upper layer function does not judge whether the applied HVA is successful, but the virtual machine defaults that the applied GVA has been successful. When the virtual machine is shut down, QEMU memory free is triggered. At this time, the block is not QLIST, resulting in null pointer dereference.</p>
-<p><img
-        class="lazyload"
-        src="/svg/loading.min.svg"
-        data-src="../../../../images/2-null-pointer/CVE-2022-1.png"
-        data-srcset="../../../../images/2-null-pointer/CVE-2022-1.png, ../../../../images/2-null-pointer/CVE-2022-1.png 1.5x, ../../../../images/2-null-pointer/CVE-2022-1.png 2x"
-        data-sizes="auto"
-        alt="../../../../images/2-null-pointer/CVE-2022-1.png"
-        title="CVE-2022-1" /></p>
+<p><figure><a class="lightgallery" href="../../../../images/2-null-pointer/CVE-2022-1.png" title="CVE-2022-1" data-thumbnail="../../../../images/2-null-pointer/CVE-2022-1.png" data-sub-html="<h2>Null pinter when free QEMU ram</h2><p>CVE-2022-1</p>">
+        <img
+            class="lazyload"
+            src="/svg/loading.min.svg"
+            data-src="../../../../images/2-null-pointer/CVE-2022-1.png"
+            data-srcset="../../../../images/2-null-pointer/CVE-2022-1.png, ../../../../images/2-null-pointer/CVE-2022-1.png 1.5x, ../../../../images/2-null-pointer/CVE-2022-1.png 2x"
+            data-sizes="auto"
+            alt="../../../../images/2-null-pointer/CVE-2022-1.png" />
+    </a><figcaption class="image-caption">Null pinter when free QEMU ram</figcaption>
+    </figure></p>
 <p>As shown below, when the virtual machine applies for large memory, the GVA is successful, but the GPA-&gt;HVA using the <code>mmap</code> function fails. Unsynchronized allocated memory results in a null pointer.</p>
-<p><img
-        class="lazyload"
-        src="/svg/loading.min.svg"
-        data-src="../../../../images/2-null-pointer/CVE-2022-2.png"
-        data-srcset="../../../../images/2-null-pointer/CVE-2022-2.png, ../../../../images/2-null-pointer/CVE-2022-2.png 1.5x, ../../../../images/2-null-pointer/CVE-2022-2.png 2x"
-        data-sizes="auto"
-        alt="../../../../images/2-null-pointer/CVE-2022-2.png"
-        title="CVE-2022-2" /></p>
+<p><figure><a class="lightgallery" href="../../../../images/2-null-pointer/CVE-2022-2.png" title="CVE-2022-2" data-thumbnail="../../../../images/2-null-pointer/CVE-2022-2.png" data-sub-html="<h2>Causes of vulnerability</h2><p>CVE-2022-2</p>">
+        <img
+            class="lazyload"
+            src="/svg/loading.min.svg"
+            data-src="../../../../images/2-null-pointer/CVE-2022-2.png"
+            data-srcset="../../../../images/2-null-pointer/CVE-2022-2.png, ../../../../images/2-null-pointer/CVE-2022-2.png 1.5x, ../../../../images/2-null-pointer/CVE-2022-2.png 2x"
+            data-sizes="auto"
+            alt="../../../../images/2-null-pointer/CVE-2022-2.png" />
+    </a><figcaption class="image-caption">Causes of vulnerability</figcaption>
+    </figure></p>
 <h2 id="fixs">Fixs</h2>
 <p>The first repair method is relatively simple, directly using <code>QLIST_SAFE_REMOVE</code> provided by QEMU.</p>
-<p><img
-        class="lazyload"
-        src="/svg/loading.min.svg"
-        data-src="../../../../images/2-null-pointer/fix-1.png"
-        data-srcset="../../../../images/2-null-pointer/fix-1.png, ../../../../images/2-null-pointer/fix-1.png 1.5x, ../../../../images/2-null-pointer/fix-1.png 2x"
-        data-sizes="auto"
-        alt="../../../../images/2-null-pointer/fix-1.png"
-        title="fix-1" /></p>
+<p><figure><a class="lightgallery" href="../../../../images/2-null-pointer/fix-1.png" title="fix-1" data-thumbnail="../../../../images/2-null-pointer/fix-1.png" data-sub-html="<h2>Patch 1</h2><p>fix-1</p>">
+        <img
+            class="lazyload"
+            src="/svg/loading.min.svg"
+            data-src="../../../../images/2-null-pointer/fix-1.png"
+            data-srcset="../../../../images/2-null-pointer/fix-1.png, ../../../../images/2-null-pointer/fix-1.png 1.5x, ../../../../images/2-null-pointer/fix-1.png 2x"
+            data-sizes="auto"
+            alt="../../../../images/2-null-pointer/fix-1.png" />
+    </a><figcaption class="image-caption">Patch 1</figcaption>
+    </figure></p>
 <p>The second repair solution seems more reasonable, because the essence of this problem is the inconsistency of the judgment of applying for GVA and GPA, so it is necessary to add consistency judgment results of them.</p>
-<p><img
-        class="lazyload"
-        src="/svg/loading.min.svg"
-        data-src="../../../../images/2-null-pointer/fix-2.png"
-        data-srcset="../../../../images/2-null-pointer/fix-2.png, ../../../../images/2-null-pointer/fix-2.png 1.5x, ../../../../images/2-null-pointer/fix-2.png 2x"
-        data-sizes="auto"
-        alt="../../../../images/2-null-pointer/fix-2.png"
-        title="fix-2" /></p>
+<p><figure><a class="lightgallery" href="../../../../images/2-null-pointer/fix-2.png" title="fix-2" data-thumbnail="../../../../images/2-null-pointer/fix-2.png" data-sub-html="<h2>Patch 2</h2><p>fix-2</p>">
+        <img
+            class="lazyload"
+            src="/svg/loading.min.svg"
+            data-src="../../../../images/2-null-pointer/fix-2.png"
+            data-srcset="../../../../images/2-null-pointer/fix-2.png, ../../../../images/2-null-pointer/fix-2.png 1.5x, ../../../../images/2-null-pointer/fix-2.png 2x"
+            data-sizes="auto"
+            alt="../../../../images/2-null-pointer/fix-2.png" />
+    </a><figcaption class="image-caption">Patch 2</figcaption>
+    </figure></p>
 <h2 id="conclusion">Conclusion</h2>
 <p>This article is only a preliminary analysis of the process of Unicorn Engine memory virtualization, and introduces the general scheme for QEMU to apply for memory for virtual machines. QEMU memory virtualization is a complex process, and more mechanisms behind it need to be further studied in the future.</p>
 </div><div class="post-footer" id="post-footer">
@@ -350,13 +364,13 @@
         <div class="post-info-line">
             <div class="post-info-md"></div>
             <div class="post-info-share">
-                <span><a href="javascript:void(0);" title="Share on Twitter" data-sharer="twitter" data-url="https://violentbinary.github.io/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/" data-title="Simple Analysis of Software Virtualization of Memory in Unicorn Engine" data-hashtags="ELF,injection,Linux,patch"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="Share on Facebook" data-sharer="facebook" data-url="https://violentbinary.github.io/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/" data-hashtag="ELF"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="Share on WhatsApp" data-sharer="whatsapp" data-url="https://violentbinary.github.io/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/" data-title="Simple Analysis of Software Virtualization of Memory in Unicorn Engine" data-web><i class="fab fa-whatsapp fa-fw"></i></a><a href="javascript:void(0);" title="Share on Line" data-sharer="line" data-url="https://violentbinary.github.io/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/" data-title="Simple Analysis of Software Virtualization of Memory in Unicorn Engine"><i data-svg-src="/lib/simple-icons/icons/line.min.svg"></i></a><a href="javascript:void(0);" title="Share on 微博" data-sharer="weibo" data-url="https://violentbinary.github.io/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/" data-title="Simple Analysis of Software Virtualization of Memory in Unicorn Engine" data-image="/images/2-null-pointer/title.png"><i class="fab fa-weibo fa-fw"></i></a><a href="javascript:void(0);" title="Share on Myspace" data-sharer="myspace" data-url="https://violentbinary.github.io/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/" data-title="Simple Analysis of Software Virtualization of Memory in Unicorn Engine" data-description=""><i data-svg-src="/lib/simple-icons/icons/myspace.min.svg"></i></a><a href="javascript:void(0);" title="Share on Blogger" data-sharer="blogger" data-url="https://violentbinary.github.io/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/" data-title="Simple Analysis of Software Virtualization of Memory in Unicorn Engine" data-description=""><i class="fab fa-blogger fa-fw"></i></a><a href="javascript:void(0);" title="Share on Evernote" data-sharer="evernote" data-url="https://violentbinary.github.io/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/" data-title="Simple Analysis of Software Virtualization of Memory in Unicorn Engine"><i class="fab fa-evernote fa-fw"></i></a></span>
+                <span><a href="javascript:void(0);" title="Share on Twitter" data-sharer="twitter" data-url="https://violentbinary.github.io/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/" data-title="Simple Analysis of Software Virtualization of Memory in Unicorn Engine" data-hashtags="Unicorn,QEMU,CVE"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="Share on Facebook" data-sharer="facebook" data-url="https://violentbinary.github.io/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/" data-hashtag="Unicorn"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="Share on WhatsApp" data-sharer="whatsapp" data-url="https://violentbinary.github.io/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/" data-title="Simple Analysis of Software Virtualization of Memory in Unicorn Engine" data-web><i class="fab fa-whatsapp fa-fw"></i></a><a href="javascript:void(0);" title="Share on Line" data-sharer="line" data-url="https://violentbinary.github.io/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/" data-title="Simple Analysis of Software Virtualization of Memory in Unicorn Engine"><i data-svg-src="/lib/simple-icons/icons/line.min.svg"></i></a><a href="javascript:void(0);" title="Share on 微博" data-sharer="weibo" data-url="https://violentbinary.github.io/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/" data-title="Simple Analysis of Software Virtualization of Memory in Unicorn Engine" data-image="/images/2-null-pointer/title.png"><i class="fab fa-weibo fa-fw"></i></a><a href="javascript:void(0);" title="Share on Myspace" data-sharer="myspace" data-url="https://violentbinary.github.io/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/" data-title="Simple Analysis of Software Virtualization of Memory in Unicorn Engine" data-description=""><i data-svg-src="/lib/simple-icons/icons/myspace.min.svg"></i></a><a href="javascript:void(0);" title="Share on Blogger" data-sharer="blogger" data-url="https://violentbinary.github.io/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/" data-title="Simple Analysis of Software Virtualization of Memory in Unicorn Engine" data-description=""><i class="fab fa-blogger fa-fw"></i></a><a href="javascript:void(0);" title="Share on Evernote" data-sharer="evernote" data-url="https://violentbinary.github.io/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/" data-title="Simple Analysis of Software Virtualization of Memory in Unicorn Engine"><i class="fab fa-evernote fa-fw"></i></a></span>
             </div>
         </div>
     </div>
 
     <div class="post-info-more">
-        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/elf/">ELF</a>,&nbsp;<a href="/tags/injection/">injection</a>,&nbsp;<a href="/tags/linux/">Linux</a>,&nbsp;<a href="/tags/patch/">patch</a></section>
+        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/unicorn/">Unicorn</a>,&nbsp;<a href="/tags/qemu/">QEMU</a>,&nbsp;<a href="/tags/cve/">CVE</a></section>
         <section>
             <span><a href="javascript:void(0);" onclick="window.history.back();">Back</a></span>&nbsp;|&nbsp;<span><a href="/">Home</a></span>
         </section>

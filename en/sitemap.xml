@@ -15,50 +15,14 @@
                     hreflang="en"
                     href="https://violentbinary.github.io/categories/"
                     /></url><url>
-            <loc>https://violentbinary.github.io/categories/cve/</loc><lastmod>2022-04-14T23:11:10&#43;08:00</lastmod><xhtml:link
+            <loc>https://violentbinary.github.io/tags/cve/</loc><lastmod>2022-04-14T23:11:10&#43;08:00</lastmod><xhtml:link
                         rel="alternate"
                         hreflang="zh-cn"
-                        href="https://violentbinary.github.io/zh-cn/categories/cve/"
+                        href="https://violentbinary.github.io/zh-cn/tags/cve/"
                         /><xhtml:link
                     rel="alternate"
                     hreflang="en"
-                    href="https://violentbinary.github.io/categories/cve/"
-                    /></url><url>
-            <loc>https://violentbinary.github.io/tags/elf/</loc><lastmod>2022-04-14T23:11:10&#43;08:00</lastmod><xhtml:link
-                        rel="alternate"
-                        hreflang="zh-cn"
-                        href="https://violentbinary.github.io/zh-cn/tags/elf/"
-                        /><xhtml:link
-                    rel="alternate"
-                    hreflang="en"
-                    href="https://violentbinary.github.io/tags/elf/"
-                    /></url><url>
-            <loc>https://violentbinary.github.io/tags/injection/</loc><lastmod>2022-04-14T23:11:10&#43;08:00</lastmod><xhtml:link
-                        rel="alternate"
-                        hreflang="zh-cn"
-                        href="https://violentbinary.github.io/zh-cn/tags/injection/"
-                        /><xhtml:link
-                    rel="alternate"
-                    hreflang="en"
-                    href="https://violentbinary.github.io/tags/injection/"
-                    /></url><url>
-            <loc>https://violentbinary.github.io/tags/linux/</loc><lastmod>2022-04-14T23:11:10&#43;08:00</lastmod><xhtml:link
-                        rel="alternate"
-                        hreflang="zh-cn"
-                        href="https://violentbinary.github.io/zh-cn/tags/linux/"
-                        /><xhtml:link
-                    rel="alternate"
-                    hreflang="en"
-                    href="https://violentbinary.github.io/tags/linux/"
-                    /></url><url>
-            <loc>https://violentbinary.github.io/tags/patch/</loc><lastmod>2022-04-14T23:11:10&#43;08:00</lastmod><xhtml:link
-                        rel="alternate"
-                        hreflang="zh-cn"
-                        href="https://violentbinary.github.io/zh-cn/tags/patch/"
-                        /><xhtml:link
-                    rel="alternate"
-                    hreflang="en"
-                    href="https://violentbinary.github.io/tags/patch/"
+                    href="https://violentbinary.github.io/tags/cve/"
                     /></url><url>
             <loc>https://violentbinary.github.io/posts/</loc><lastmod>2022-04-14T23:11:10&#43;08:00</lastmod><xhtml:link
                         rel="alternate"
@@ -69,14 +33,14 @@
                     hreflang="en"
                     href="https://violentbinary.github.io/posts/"
                     /></url><url>
-            <loc>https://violentbinary.github.io/categories/qemu/</loc><lastmod>2022-04-14T23:11:10&#43;08:00</lastmod><xhtml:link
+            <loc>https://violentbinary.github.io/tags/qemu/</loc><lastmod>2022-04-14T23:11:10&#43;08:00</lastmod><xhtml:link
                         rel="alternate"
                         hreflang="zh-cn"
-                        href="https://violentbinary.github.io/zh-cn/categories/qemu/"
+                        href="https://violentbinary.github.io/zh-cn/tags/qemu/"
                         /><xhtml:link
                     rel="alternate"
                     hreflang="en"
-                    href="https://violentbinary.github.io/categories/qemu/"
+                    href="https://violentbinary.github.io/tags/qemu/"
                     /></url><url>
             <loc>https://violentbinary.github.io/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/</loc><lastmod>2022-04-14T23:11:10&#43;08:00</lastmod><xhtml:link
                         rel="alternate"
@@ -100,14 +64,14 @@
                     hreflang="en"
                     href="https://violentbinary.github.io/tags/"
                     /></url><url>
-            <loc>https://violentbinary.github.io/categories/unicorn/</loc><lastmod>2022-04-14T23:11:10&#43;08:00</lastmod><xhtml:link
+            <loc>https://violentbinary.github.io/tags/unicorn/</loc><lastmod>2022-04-14T23:11:10&#43;08:00</lastmod><xhtml:link
                         rel="alternate"
                         hreflang="zh-cn"
-                        href="https://violentbinary.github.io/zh-cn/categories/unicorn/"
+                        href="https://violentbinary.github.io/zh-cn/tags/unicorn/"
                         /><xhtml:link
                     rel="alternate"
                     hreflang="en"
-                    href="https://violentbinary.github.io/categories/unicorn/"
+                    href="https://violentbinary.github.io/tags/unicorn/"
                     /></url><url>
             <loc>https://violentbinary.github.io/</loc><lastmod>2022-04-14T23:11:10&#43;08:00</lastmod><xhtml:link
                         rel="alternate"
@@ -122,6 +86,12 @@
                     hreflang="en"
                     href="https://violentbinary.github.io/"
                     /></url><url>
+            <loc>https://violentbinary.github.io/categories/virtualization/</loc><lastmod>2022-04-14T23:11:10&#43;08:00</lastmod></url><url>
+            <loc>https://violentbinary.github.io/categories/vulnerability-analysis/</loc><lastmod>2022-04-14T23:11:10&#43;08:00</lastmod></url><url>
+            <loc>https://violentbinary.github.io/tags/elf/</loc><lastmod>2021-11-07T21:13:39&#43;08:00</lastmod></url><url>
             <loc>https://violentbinary.github.io/categories/elf/</loc><lastmod>2021-11-07T21:13:39&#43;08:00</lastmod></url><url>
             <loc>https://violentbinary.github.io/posts/1-elf-static-injection-to-load-malicious-dynamic-link-library/</loc><lastmod>2021-11-07T21:13:39&#43;08:00</lastmod></url><url>
+            <loc>https://violentbinary.github.io/tags/injection/</loc><lastmod>2021-11-07T21:13:39&#43;08:00</lastmod></url><url>
+            <loc>https://violentbinary.github.io/tags/linux/</loc><lastmod>2021-11-07T21:13:39&#43;08:00</lastmod></url><url>
+            <loc>https://violentbinary.github.io/tags/patch/</loc><lastmod>2021-11-07T21:13:39&#43;08:00</lastmod></url><url>
             <loc>https://violentbinary.github.io/categories/reverse-engineering/</loc><lastmod>2021-11-07T21:13:39&#43;08:00</lastmod></url></urlset>

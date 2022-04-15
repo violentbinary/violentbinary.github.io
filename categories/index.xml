@@ -4,25 +4,18 @@
         <link>https://violentbinary.github.io/categories/</link>
         <description>Categories - Category - Violent Binary</description>
         <generator>Hugo -- gohugo.io</generator><language>en</language><lastBuildDate>Thu, 14 Apr 2022 23:11:10 &#43;0800</lastBuildDate><atom:link href="https://violentbinary.github.io/categories/" rel="self" type="application/rss+xml" /><item>
-    <title>CVE</title>
-    <link>https://violentbinary.github.io/categories/cve/</link>
+    <title>Virtualization</title>
+    <link>https://violentbinary.github.io/categories/virtualization/</link>
     <pubDate>Thu, 14 Apr 2022 23:11:10 &#43;0800</pubDate>
     <author>Author</author>
-    <guid>https://violentbinary.github.io/categories/cve/</guid>
+    <guid>https://violentbinary.github.io/categories/virtualization/</guid>
     <description><![CDATA[]]></description>
 </item><item>
-    <title>QEMU</title>
-    <link>https://violentbinary.github.io/categories/qemu/</link>
+    <title>Vulnerability Analysis</title>
+    <link>https://violentbinary.github.io/categories/vulnerability-analysis/</link>
     <pubDate>Thu, 14 Apr 2022 23:11:10 &#43;0800</pubDate>
     <author>Author</author>
-    <guid>https://violentbinary.github.io/categories/qemu/</guid>
-    <description><![CDATA[]]></description>
-</item><item>
-    <title>Unicorn</title>
-    <link>https://violentbinary.github.io/categories/unicorn/</link>
-    <pubDate>Thu, 14 Apr 2022 23:11:10 &#43;0800</pubDate>
-    <author>Author</author>
-    <guid>https://violentbinary.github.io/categories/unicorn/</guid>
+    <guid>https://violentbinary.github.io/categories/vulnerability-analysis/</guid>
     <description><![CDATA[]]></description>
 </item><item>
     <title>ELF</title>
@@ -32,7 +25,7 @@
     <guid>https://violentbinary.github.io/categories/elf/</guid>
     <description><![CDATA[]]></description>
 </item><item>
-    <title>reverse engineering</title>
+    <title>Reverse Engineering</title>
     <link>https://violentbinary.github.io/categories/reverse-engineering/</link>
     <pubDate>Sun, 07 Nov 2021 21:13:39 &#43;0800</pubDate>
     <author>Author</author>

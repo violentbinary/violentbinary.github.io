@@ -29,7 +29,7 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/violentbinary.github.io\/zh-cn\/posts\/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine\/"
-        },"genre": "posts","keywords": "ELF, injection, Linux, patch","wordcount":  1675 ,
+        },"genre": "posts","keywords": "Unicorn, QEMU, CVE","wordcount":  1847 ,
         "url": "https:\/\/violentbinary.github.io\/zh-cn\/posts\/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine\/","datePublished": "2022-04-14T23:33:18+08:00","dateModified": "2022-04-14T23:33:18+08:00","publisher": {
             "@type": "Organization",
             "name": ""},"author": {
@@ -96,8 +96,8 @@
             <h2 class="toc-title">目录</h2>
             <div class="toc-content always-active" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animated flipInX">Unicorn Engine 内存的软件虚拟化浅析</h1><div class="post-meta">
-            <div class="post-meta-line"><span class="post-author"><a href="/zh-cn/" title="Author" rel=" author" class="author"><i class="fas fa-user-circle fa-fw"></i>liyansong</a></span>&nbsp;<span class="post-category">收录于 <a href="/zh-cn/categories/unicorn/"><i class="far fa-folder fa-fw"></i>Unicorn</a>&nbsp;<a href="/zh-cn/categories/qemu/"><i class="far fa-folder fa-fw"></i>QEMU</a>&nbsp;<a href="/zh-cn/categories/cve/"><i class="far fa-folder fa-fw"></i>CVE</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2022-04-14">2022-04-14</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 1675 字&nbsp;
+            <div class="post-meta-line"><span class="post-author"><a href="/zh-cn/" title="Author" rel=" author" class="author"><i class="fas fa-user-circle fa-fw"></i>liyansong</a></span>&nbsp;<span class="post-category">收录于 <a href="/zh-cn/categories/%E8%99%9A%E6%8B%9F%E5%8C%96/"><i class="far fa-folder fa-fw"></i>虚拟化</a>&nbsp;<a href="/zh-cn/categories/%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/"><i class="far fa-folder fa-fw"></i>漏洞分析</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2022-04-14">2022-04-14</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 1847 字&nbsp;
                 <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 4 分钟&nbsp;<span id="/zh-cn/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/" class="leancloud_visitors" data-flag-title="Unicorn Engine 内存的软件虚拟化浅析">
                         <i class="far fa-eye fa-fw"></i>&nbsp;<span class=leancloud-visitors-count></span>&nbsp;次阅读
                     </span>&nbsp;</div>
@@ -135,14 +135,16 @@
             </div><div class="content" id="content"><p>Unicorn Engine 由 QEMU 裁剪而来，可以说是 QEMU 的分支，但是又是一个完全独立的项目。Unicorn 提供了丰富的 API，让我们可以很方便的体验 QEMU 虚拟化技术带来的诸多特性，但是同时也面临一些安全问题。我们以分析 CVE-2022-XXXX 漏洞为例，简要概述 Unicorn 内存虚拟化的原理。这里只做一些浅显的分析，让大家快速掌握 QEMU 虚拟化的全貌。</p>
 <h2 id="基础结构体">基础结构体</h2>
 <p>我们首先介绍 QEMU 中的两个重要的结构体，即 Memory Region 和 RAM Block。你也可以先看后面章节的具体代码，再回过头来看他们中的每个域成员的作用，以达到更好的理解效果。</p>
-<p><img
-        class="lazyload"
-        src="/svg/loading.min.svg"
-        data-src="../../../../images/2-null-pointer/MemoryManager.png"
-        data-srcset="../../../../images/2-null-pointer/MemoryManager.png, ../../../../images/2-null-pointer/MemoryManager.png 1.5x, ../../../../images/2-null-pointer/MemoryManager.png 2x"
-        data-sizes="auto"
-        alt="../../../../images/2-null-pointer/MemoryManager.png"
-        title="MemoryManager" /></p>
+<p><figure><a class="lightgallery" href="../../../../images/2-null-pointer/MemoryManager.png" title="MemoryManager" data-thumbnail="../../../../images/2-null-pointer/MemoryManager.png" data-sub-html="<h2>QEMU 内存管理架构</h2><p>MemoryManager</p>">
+        <img
+            class="lazyload"
+            src="/svg/loading.min.svg"
+            data-src="../../../../images/2-null-pointer/MemoryManager.png"
+            data-srcset="../../../../images/2-null-pointer/MemoryManager.png, ../../../../images/2-null-pointer/MemoryManager.png 1.5x, ../../../../images/2-null-pointer/MemoryManager.png 2x"
+            data-sizes="auto"
+            alt="../../../../images/2-null-pointer/MemoryManager.png" />
+    </a><figcaption class="image-caption">QEMU 内存管理架构</figcaption>
+    </figure></p>
 <h3 id="memory-region">Memory Region</h3>
 <p>MemoryRegion 是 QEMU 内存管理中一个重要的结构体，是管理 GVA(Guest Virtual Address, 客户机即虚拟机中的虚拟空间地址) 每块内存空间的结构体。</p>
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-c" data-lang="c"><span class="k">struct</span> <span class="n">MemoryRegion</span> <span class="p">{</span>
@@ -215,14 +217,16 @@
 <span class="p">}</span>
 </code></pre></div><h3 id="申请-memory-region">申请 Memory Region</h3>
 <p>继续分析 <code>memory_map</code>，此函数定义在 <code>qemu/softmmu/memory.c</code> 文件中，用于正式申请 Memory Region。从函数 <code>memory_region_add_subregion</code> 可以看出来，Unicorn 使用 uc-&gt;system_memory 作为一个管理所有 Region 的父集。</p>
-<p><img
-        class="lazyload"
-        src="/svg/loading.min.svg"
-        data-src="../../../../images/2-null-pointer/MemoryRegion.png"
-        data-srcset="../../../../images/2-null-pointer/MemoryRegion.png, ../../../../images/2-null-pointer/MemoryRegion.png 1.5x, ../../../../images/2-null-pointer/MemoryRegion.png 2x"
-        data-sizes="auto"
-        alt="../../../../images/2-null-pointer/MemoryRegion.png"
-        title="MemoryRegion" /></p>
+<p><figure><a class="lightgallery" href="../../../../images/2-null-pointer/MemoryRegion.png" title="MemoryRegion" data-thumbnail="../../../../images/2-null-pointer/MemoryRegion.png" data-sub-html="<h2>Memory region 结构</h2><p>MemoryRegion</p>">
+        <img
+            class="lazyload"
+            src="/svg/loading.min.svg"
+            data-src="../../../../images/2-null-pointer/MemoryRegion.png"
+            data-srcset="../../../../images/2-null-pointer/MemoryRegion.png, ../../../../images/2-null-pointer/MemoryRegion.png 1.5x, ../../../../images/2-null-pointer/MemoryRegion.png 2x"
+            data-sizes="auto"
+            alt="../../../../images/2-null-pointer/MemoryRegion.png" />
+    </a><figcaption class="image-caption">Memory region 结构</figcaption>
+    </figure></p>
 <p>代码</p>
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-c" data-lang="c"><span class="n">MemoryRegion</span> <span class="o">*</span><span class="nf">memory_map</span><span class="p">(</span><span class="k">struct</span> <span class="n">uc_struct</span> <span class="o">*</span><span class="n">uc</span><span class="p">,</span> <span class="n">hwaddr</span> <span class="n">begin</span><span class="p">,</span> <span class="n">size_t</span> <span class="n">size</span><span class="p">,</span> <span class="kt">uint32_t</span> <span class="n">perms</span><span class="p">)</span>
 <span class="p">{</span>
@@ -295,51 +299,61 @@
 </code></pre></div><p>函数 <code>ram_block_add</code> 用于将一根内存条添加到系统中，此函数首先申请 PVA，再将 RAMBlock 添加到系统空间中。</p>
 <h3 id="非一致性结果导致的空指针">非一致性结果导致的空指针</h3>
 <p>QEMU 虚拟机申请内存，最终还是需要在宿主机上申请相应的内存。那么问题来了，当虚拟机申请一块超大内存时，实际申请必然失败。而下面的函数没有返回申请结果的状态，当前这个 RAMBlock 也没有被添加到 <code>ram_list.blocks</code></p>
-<p><img
-        class="lazyload"
-        src="/svg/loading.min.svg"
-        data-src="../../../../images/2-null-pointer/CVE-2022.png"
-        data-srcset="../../../../images/2-null-pointer/CVE-2022.png, ../../../../images/2-null-pointer/CVE-2022.png 1.5x, ../../../../images/2-null-pointer/CVE-2022.png 2x"
-        data-sizes="auto"
-        alt="../../../../images/2-null-pointer/CVE-2022.png"
-        title="CVE-2022" /></p>
+<p><figure><a class="lightgallery" href="../../../../images/2-null-pointer/CVE-2022.png" title="CVE-2022" data-thumbnail="../../../../images/2-null-pointer/CVE-2022.png" data-sub-html="<h2>为虚拟机分配物理内存</h2><p>CVE-2022</p>">
+        <img
+            class="lazyload"
+            src="/svg/loading.min.svg"
+            data-src="../../../../images/2-null-pointer/CVE-2022.png"
+            data-srcset="../../../../images/2-null-pointer/CVE-2022.png, ../../../../images/2-null-pointer/CVE-2022.png 1.5x, ../../../../images/2-null-pointer/CVE-2022.png 2x"
+            data-sizes="auto"
+            alt="../../../../images/2-null-pointer/CVE-2022.png" />
+    </a><figcaption class="image-caption">为虚拟机分配物理内存</figcaption>
+    </figure></p>
 <p>上层函数并没有判断 HVA 申请是否成功，而虚拟机默认 GVA 已经申请成功。在关闭虚拟机的时候，触发 QEMU Memory Free，这时候这个 Block 其实还不是一个 QLIST，导致空指针解引用。</p>
-<p><img
-        class="lazyload"
-        src="/svg/loading.min.svg"
-        data-src="../../../../images/2-null-pointer/CVE-2022-1.png"
-        data-srcset="../../../../images/2-null-pointer/CVE-2022-1.png, ../../../../images/2-null-pointer/CVE-2022-1.png 1.5x, ../../../../images/2-null-pointer/CVE-2022-1.png 2x"
-        data-sizes="auto"
-        alt="../../../../images/2-null-pointer/CVE-2022-1.png"
-        title="CVE-2022-1" /></p>
+<p><figure><a class="lightgallery" href="../../../../images/2-null-pointer/CVE-2022-1.png" title="CVE-2022-1" data-thumbnail="../../../../images/2-null-pointer/CVE-2022-1.png" data-sub-html="<h2>释放虚拟机内存时出现空指针</h2><p>CVE-2022-1</p>">
+        <img
+            class="lazyload"
+            src="/svg/loading.min.svg"
+            data-src="../../../../images/2-null-pointer/CVE-2022-1.png"
+            data-srcset="../../../../images/2-null-pointer/CVE-2022-1.png, ../../../../images/2-null-pointer/CVE-2022-1.png 1.5x, ../../../../images/2-null-pointer/CVE-2022-1.png 2x"
+            data-sizes="auto"
+            alt="../../../../images/2-null-pointer/CVE-2022-1.png" />
+    </a><figcaption class="image-caption">释放虚拟机内存时出现空指针</figcaption>
+    </figure></p>
 <p>如下所示，虚拟机申请大内存时，GVA 申请成功，但是 GPA-&gt;HVA 使用 mmap 函数申请失败。未同步申请的内存导致空指针。</p>
-<p><img
-        class="lazyload"
-        src="/svg/loading.min.svg"
-        data-src="../../../../images/2-null-pointer/CVE-2022-2.png"
-        data-srcset="../../../../images/2-null-pointer/CVE-2022-2.png, ../../../../images/2-null-pointer/CVE-2022-2.png 1.5x, ../../../../images/2-null-pointer/CVE-2022-2.png 2x"
-        data-sizes="auto"
-        alt="../../../../images/2-null-pointer/CVE-2022-2.png"
-        title="CVE-2022-2" /></p>
+<p><figure><a class="lightgallery" href="../../../../images/2-null-pointer/CVE-2022-2.png" title="CVE-2022-2" data-thumbnail="../../../../images/2-null-pointer/CVE-2022-2.png" data-sub-html="<h2>漏洞产生的原因</h2><p>CVE-2022-2</p>">
+        <img
+            class="lazyload"
+            src="/svg/loading.min.svg"
+            data-src="../../../../images/2-null-pointer/CVE-2022-2.png"
+            data-srcset="../../../../images/2-null-pointer/CVE-2022-2.png, ../../../../images/2-null-pointer/CVE-2022-2.png 1.5x, ../../../../images/2-null-pointer/CVE-2022-2.png 2x"
+            data-sizes="auto"
+            alt="../../../../images/2-null-pointer/CVE-2022-2.png" />
+    </a><figcaption class="image-caption">漏洞产生的原因</figcaption>
+    </figure></p>
 <h2 id="修复方案">修复方案</h2>
 <p>第一种修复方式比较简单，直接使用 QEMU 提供的 QLIST 链表的安全删除方法，即 <code>QLIST_SAFE_REMOVE</code></p>
-<p><img
-        class="lazyload"
-        src="/svg/loading.min.svg"
-        data-src="../../../../images/2-null-pointer/fix-1.png"
-        data-srcset="../../../../images/2-null-pointer/fix-1.png, ../../../../images/2-null-pointer/fix-1.png 1.5x, ../../../../images/2-null-pointer/fix-1.png 2x"
-        data-sizes="auto"
-        alt="../../../../images/2-null-pointer/fix-1.png"
-        title="fix-1" /></p>
+<p><figure><a class="lightgallery" href="../../../../images/2-null-pointer/fix-1.png" title="fix-1" data-thumbnail="../../../../images/2-null-pointer/fix-1.png" data-sub-html="<h2>修复方案一</h2><p>fix-1</p>">
+        <img
+            class="lazyload"
+            src="/svg/loading.min.svg"
+            data-src="../../../../images/2-null-pointer/fix-1.png"
+            data-srcset="../../../../images/2-null-pointer/fix-1.png, ../../../../images/2-null-pointer/fix-1.png 1.5x, ../../../../images/2-null-pointer/fix-1.png 2x"
+            data-sizes="auto"
+            alt="../../../../images/2-null-pointer/fix-1.png" />
+    </a><figcaption class="image-caption">修复方案一</figcaption>
+    </figure></p>
 <p>第二种修复方案似乎更为合理，因为这个问题的本质其实是 GVA 与 GPA 申请结果的判断不一致导致的，因此要修改逻辑，添加内存申请一致性判断。</p>
-<p><img
-        class="lazyload"
-        src="/svg/loading.min.svg"
-        data-src="../../../../images/2-null-pointer/fix-2.png"
-        data-srcset="../../../../images/2-null-pointer/fix-2.png, ../../../../images/2-null-pointer/fix-2.png 1.5x, ../../../../images/2-null-pointer/fix-2.png 2x"
-        data-sizes="auto"
-        alt="../../../../images/2-null-pointer/fix-2.png"
-        title="fix-2" /></p>
+<p><figure><a class="lightgallery" href="../../../../images/2-null-pointer/fix-2.png" title="fix-2" data-thumbnail="../../../../images/2-null-pointer/fix-2.png" data-sub-html="<h2>修复方案二</h2><p>fix-2</p>">
+        <img
+            class="lazyload"
+            src="/svg/loading.min.svg"
+            data-src="../../../../images/2-null-pointer/fix-2.png"
+            data-srcset="../../../../images/2-null-pointer/fix-2.png, ../../../../images/2-null-pointer/fix-2.png 1.5x, ../../../../images/2-null-pointer/fix-2.png 2x"
+            data-sizes="auto"
+            alt="../../../../images/2-null-pointer/fix-2.png" />
+    </a><figcaption class="image-caption">修复方案二</figcaption>
+    </figure></p>
 <h2 id="总结">总结</h2>
 <p>本文只是初步分析了 Unicorn Engine 内存虚拟化的过程，介绍了 QEMU 为虚拟机申请内存的大致方案。QEMU 内存虚拟化是一个复杂的过程，背后更多的机制有待后续进一步研究。</p>
 </div><div class="post-footer" id="post-footer">
@@ -353,13 +367,13 @@
         <div class="post-info-line">
             <div class="post-info-md"></div>
             <div class="post-info-share">
-                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://violentbinary.github.io/zh-cn/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/" data-title="Unicorn Engine 内存的软件虚拟化浅析" data-hashtags="ELF,injection,Linux,patch"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://violentbinary.github.io/zh-cn/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/" data-hashtag="ELF"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="分享到 WhatsApp" data-sharer="whatsapp" data-url="https://violentbinary.github.io/zh-cn/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/" data-title="Unicorn Engine 内存的软件虚拟化浅析" data-web><i class="fab fa-whatsapp fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://violentbinary.github.io/zh-cn/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/" data-title="Unicorn Engine 内存的软件虚拟化浅析"><i data-svg-src="/lib/simple-icons/icons/line.min.svg"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://violentbinary.github.io/zh-cn/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/" data-title="Unicorn Engine 内存的软件虚拟化浅析" data-image="/images/2-null-pointer/title.png"><i class="fab fa-weibo fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Myspace" data-sharer="myspace" data-url="https://violentbinary.github.io/zh-cn/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/" data-title="Unicorn Engine 内存的软件虚拟化浅析" data-description=""><i data-svg-src="/lib/simple-icons/icons/myspace.min.svg"></i></a><a href="javascript:void(0);" title="分享到 Blogger" data-sharer="blogger" data-url="https://violentbinary.github.io/zh-cn/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/" data-title="Unicorn Engine 内存的软件虚拟化浅析" data-description=""><i class="fab fa-blogger fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Evernote" data-sharer="evernote" data-url="https://violentbinary.github.io/zh-cn/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/" data-title="Unicorn Engine 内存的软件虚拟化浅析"><i class="fab fa-evernote fa-fw"></i></a></span>
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://violentbinary.github.io/zh-cn/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/" data-title="Unicorn Engine 内存的软件虚拟化浅析" data-hashtags="Unicorn,QEMU,CVE"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://violentbinary.github.io/zh-cn/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/" data-hashtag="Unicorn"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="分享到 WhatsApp" data-sharer="whatsapp" data-url="https://violentbinary.github.io/zh-cn/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/" data-title="Unicorn Engine 内存的软件虚拟化浅析" data-web><i class="fab fa-whatsapp fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://violentbinary.github.io/zh-cn/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/" data-title="Unicorn Engine 内存的软件虚拟化浅析"><i data-svg-src="/lib/simple-icons/icons/line.min.svg"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://violentbinary.github.io/zh-cn/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/" data-title="Unicorn Engine 内存的软件虚拟化浅析" data-image="/images/2-null-pointer/title.png"><i class="fab fa-weibo fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Myspace" data-sharer="myspace" data-url="https://violentbinary.github.io/zh-cn/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/" data-title="Unicorn Engine 内存的软件虚拟化浅析" data-description=""><i data-svg-src="/lib/simple-icons/icons/myspace.min.svg"></i></a><a href="javascript:void(0);" title="分享到 Blogger" data-sharer="blogger" data-url="https://violentbinary.github.io/zh-cn/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/" data-title="Unicorn Engine 内存的软件虚拟化浅析" data-description=""><i class="fab fa-blogger fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Evernote" data-sharer="evernote" data-url="https://violentbinary.github.io/zh-cn/posts/2-simple-analysis-of-software-virtualization-of-memory-in-unicorn-engine/" data-title="Unicorn Engine 内存的软件虚拟化浅析"><i class="fab fa-evernote fa-fw"></i></a></span>
             </div>
         </div>
     </div>
 
     <div class="post-info-more">
-        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/zh-cn/tags/elf/">ELF</a>,&nbsp;<a href="/zh-cn/tags/injection/">injection</a>,&nbsp;<a href="/zh-cn/tags/linux/">Linux</a>,&nbsp;<a href="/zh-cn/tags/patch/">patch</a></section>
+        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/zh-cn/tags/unicorn/">Unicorn</a>,&nbsp;<a href="/zh-cn/tags/qemu/">QEMU</a>,&nbsp;<a href="/zh-cn/tags/cve/">CVE</a></section>
         <section>
             <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/zh-cn/">主页</a></span>
         </section>
